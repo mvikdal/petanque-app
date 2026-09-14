@@ -2,10 +2,16 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import {
+  beregnRundeResultat,
   beregnSesongtabell,
   rangerRunde,
+  sammenlignRundeResultat,
   type SpillerMedRunder,
 } from "@/lib/ranking";
+
+function formatPoeng(p: number) {
+  return p > 0 ? `+${p}` : String(p);
+}
 
 export default async function SeriePage({
   params,
@@ -44,6 +50,46 @@ export default async function SeriePage({
     serie.antallTellendeRunder
   );
 
+  // Serierekord: beste enkeltrunde-resultat (sumSeire, deretter sumPoengforskjell)
+  // registrert i serien så langt. Flere kan dele rekorden.
+  type Serierekord = {
+    spillerNavn: string;
+    rundeId: string;
+    rundenummer: number;
+    dato: Date;
+    sumSeire: number;
+    sumPoengforskjell: number;
+  };
+  let serierekord: Serierekord[] = [];
+  for (const runde of serie.runder) {
+    for (const d of runde.deltakelser) {
+      const resultat = beregnRundeResultat(d);
+      const sammenligning =
+        serierekord.length === 0
+          ? -1
+          : sammenlignRundeResultat(resultat, serierekord[0]);
+      if (sammenligning < 0) {
+        serierekord = [
+          {
+            spillerNavn: d.spiller.navn,
+            rundeId: runde.id,
+            rundenummer: runde.rundenummer,
+            dato: runde.dato,
+            ...resultat,
+          },
+        ];
+      } else if (sammenligning === 0) {
+        serierekord.push({
+          spillerNavn: d.spiller.navn,
+          rundeId: runde.id,
+          rundenummer: runde.rundenummer,
+          dato: runde.dato,
+          ...resultat,
+        });
+      }
+    }
+  }
+
   return (
     <div className="space-y-10">
       <div>
@@ -53,6 +99,26 @@ export default async function SeriePage({
           teller · {serie.status}
         </p>
       </div>
+
+      {serierekord.length > 0 && (
+        <section className="bg-white border border-neutral-200 rounded-md px-4 py-3">
+          <h2 className="text-xs font-medium text-neutral-500 uppercase mb-1">
+            Serierekord
+          </h2>
+          {serierekord.map((r) => (
+            <div key={`${r.spillerNavn}-${r.rundeId}`} className="text-sm">
+              <span className="font-medium">{r.spillerNavn}</span> – {r.sumSeire} seire,{" "}
+              {formatPoeng(r.sumPoengforskjell)} poeng{" "}
+              <Link
+                href={`/serie/${serie.id}/runde/${r.rundeId}`}
+                className="text-neutral-500 hover:underline"
+              >
+                (runde {r.rundenummer} · {new Date(r.dato).toLocaleDateString("no-NO")})
+              </Link>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section>
         <h2 className="font-medium mb-3">Sesongtabell</h2>
@@ -101,7 +167,7 @@ export default async function SeriePage({
         ) : (
           <ul className="divide-y divide-neutral-200 border border-neutral-200 rounded-md bg-white">
             {serie.runder.map((runde) => {
-              const rangert = rangerRunde(
+              const topp3 = rangerRunde(
                 runde.deltakelser.map((d) => ({
                   spillerId: d.spillerId,
                   spillerNavn: d.spiller.navn,
@@ -109,24 +175,25 @@ export default async function SeriePage({
                   kamp2: d.kamp2,
                   kamp3: d.kamp3,
                 }))
-              );
-              const vinner = rangert[0];
+              ).slice(0, 3);
               return (
                 <li key={runde.id}>
                   <Link
                     href={`/serie/${serie.id}/runde/${runde.id}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-neutral-50"
+                    className="flex items-start justify-between gap-4 px-4 py-3 hover:bg-neutral-50"
                   >
                     <span>
                       Runde {runde.rundenummer} ·{" "}
                       {new Date(runde.dato).toLocaleDateString("no-NO")}
                     </span>
-                    {vinner && (
-                      <span className="text-xs text-neutral-500">
-                        Vinner: {vinner.spillerNavn} ({vinner.sumSeire}-
-                        {3 - vinner.sumSeire})
-                      </span>
-                    )}
+                    <div className="text-xs text-neutral-500 text-right space-y-0.5">
+                      {topp3.map((r) => (
+                        <div key={r.spillerId}>
+                          {r.plass}. {r.spillerNavn} ({r.sumSeire},{" "}
+                          {formatPoeng(r.sumPoengforskjell)})
+                        </div>
+                      ))}
+                    </div>
                   </Link>
                 </li>
               );

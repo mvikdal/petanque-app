@@ -30,12 +30,21 @@ export async function createSerie(formData: FormData) {
   revalidatePath("/");
 }
 
-export async function createSpiller(navn: string) {
+export async function createSpiller(serieId: string, navn: string) {
   const trimmet = navn.trim();
   if (!trimmet) {
     throw new Error("Navn kan ikke være tomt");
   }
-  const spiller = await prisma.spiller.create({ data: { navn: trimmet } });
+
+  const eksisterende = await prisma.spiller.findMany({ where: { serieId } });
+  const finnesAllerede = eksisterende.some(
+    (s) => s.navn.toLowerCase() === trimmet.toLowerCase()
+  );
+  if (finnesAllerede) {
+    throw new Error(`"${trimmet}" er allerede registrert i denne serien.`);
+  }
+
+  const spiller = await prisma.spiller.create({ data: { navn: trimmet, serieId } });
   return spiller;
 }
 
@@ -55,6 +64,13 @@ export async function createRunde(
 
   if (deltakelser.length === 0) {
     throw new Error("Minst én spiller må delta i runden");
+  }
+
+  const antallSpillereISerie = await prisma.spiller.count({
+    where: { serieId, id: { in: deltakelser.map((d) => d.spillerId) } },
+  });
+  if (antallSpillereISerie !== deltakelser.length) {
+    throw new Error("En eller flere spillere hører ikke til denne serien.");
   }
 
   for (const d of deltakelser) {

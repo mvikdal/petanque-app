@@ -47,10 +47,17 @@ export function NyRundeForm({
 
   async function leggTilSpiller() {
     if (!nyttNavn.trim()) return;
-    const spiller = await createSpiller(nyttNavn);
-    setSpillere((prev) => [...prev, spiller].sort((a, b) => a.navn.localeCompare(b.navn)));
-    setValgte((prev) => new Set(prev).add(spiller.id));
-    setNyttNavn("");
+    setFeilmelding(null);
+    try {
+      const spiller = await createSpiller(serieId, nyttNavn);
+      setSpillere((prev) =>
+        [...prev, spiller].sort((a, b) => a.navn.localeCompare(b.navn))
+      );
+      setValgte((prev) => new Set(prev).add(spiller.id));
+      setNyttNavn("");
+    } catch (e) {
+      setFeilmelding(e instanceof Error ? e.message : "Kunne ikke legge til spiller.");
+    }
   }
 
   function validerOgLagre() {

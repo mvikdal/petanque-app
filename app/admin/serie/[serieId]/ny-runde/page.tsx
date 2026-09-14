@@ -11,7 +11,10 @@ export default async function NyRundePage({
   const serie = await prisma.serie.findUnique({ where: { id: serieId } });
   if (!serie) notFound();
 
-  const spillere = await prisma.spiller.findMany({ orderBy: { navn: "asc" } });
+  const spillere = await prisma.spiller.findMany({
+    where: { serieId },
+    orderBy: { navn: "asc" },
+  });
   const sisteRunde = await prisma.runde.findFirst({
     where: { serieId },
     orderBy: { rundenummer: "desc" },

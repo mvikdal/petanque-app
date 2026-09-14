@@ -50,8 +50,7 @@ Klubben gjennomfører faste, ukentlige seriekvelder over en lang sesong (mange u
 
 ### Spiller
 - `navn`
-- Kan delta i én eller flere serier, uavhengig av hverandre
-- Delt spillerregister på tvers av serier (vurder om dette også skal være samme register som brukes i turneringsmodulen – se pkt. 7)
+- Tilhører én bestemt serie (`serieId`) – spillerregisteret er **ikke** delt mellom serier. Samme person må registreres på nytt (med samme navn) i hver serie den deltar i. **Avklart 2026-09-14**, se §9.
 
 ## 4. Arbeidsflyt: registrering av en runde
 

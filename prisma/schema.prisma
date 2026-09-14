@@ -7,11 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Spillerregisteret er separat per serie (avklart 2026-09-14) - samme
+// person må registreres på nytt i hver serie den deltar i.
 model Spiller {
   id          String       @id @default(cuid())
   navn        String
+  serieId     String
+  serie       Serie        @relation(fields: [serieId], references: [id], onDelete: Cascade)
   opprettet   DateTime     @default(now())
   deltakelser Deltakelse[]
+
+  @@unique([serieId, navn])
 }
 
 model Serie {
@@ -25,6 +31,7 @@ model Serie {
   status               String   @default("aktiv") // "aktiv" | "avsluttet"
   opprettet            DateTime @default(now())
   runder               Runde[]
+  spillere             Spiller[]
 }
 
 model Runde {
