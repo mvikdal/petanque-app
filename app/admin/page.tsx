@@ -11,41 +11,43 @@ export default async function AdminPage() {
   return (
     <div className="space-y-10">
       <section>
-        <h1 className="text-xl font-semibold mb-4">Admin</h1>
-        <p className="text-sm text-neutral-500">
-          Ingen innlogging er satt opp i denne lokale prototypen. Legg til
-          passordbeskyttelse før dette publiseres på nett.
+        <h1 className="text-2xl font-bold text-neutral-900 mb-4">Admin</h1>
+        <p className="text-sm text-neutral-700">
+          Beskyttet med admin-passord. Denne siden er ikke lenket fra de
+          offentlige sidene.
         </p>
       </section>
 
       <section>
-        <h2 className="font-medium mb-3">Serier</h2>
+        <h2 className="font-semibold text-neutral-900 border-b-2 border-indigo-600 inline-block pb-1 mb-3">
+          Serier
+        </h2>
         {serier.length === 0 && (
-          <p className="text-sm text-neutral-500">Ingen serier opprettet ennå.</p>
+          <p className="text-sm text-neutral-700">Ingen serier opprettet ennå.</p>
         )}
-        <ul className="divide-y divide-neutral-200 border border-neutral-200 rounded-md bg-white">
+        <ul className="divide-y divide-neutral-200 border border-neutral-200 rounded-lg bg-white shadow-sm">
           {serier.map((s) => (
             <li key={s.id} className="flex items-center justify-between px-4 py-3">
               <div>
-                <div className="font-medium">{s.navn}</div>
-                <div className="text-xs text-neutral-500">
+                <div className="font-semibold text-neutral-900">{s.navn}</div>
+                <div className="text-sm text-neutral-600">
                   {s._count.runder} runde(r) · poeng til {s.poengGrense} · {s.status}
                 </div>
               </div>
               <div className="flex gap-3 text-sm">
                 <Link
-                  className="text-blue-600 hover:underline"
+                  className="text-indigo-700 font-medium hover:underline"
                   href={`/admin/serie/${s.id}/ny-runde`}
                 >
                   Ny runde
                 </Link>
                 <Link
-                  className="text-blue-600 hover:underline"
+                  className="text-indigo-700 font-medium hover:underline"
                   href={`/admin/serie/${s.id}/runder`}
                 >
                   Runder
                 </Link>
-                <Link className="text-neutral-500 hover:underline" href={`/serie/${s.id}`}>
+                <Link className="text-neutral-600 hover:underline" href={`/serie/${s.id}`}>
                   Offentlig side
                 </Link>
               </div>
@@ -55,10 +57,12 @@ export default async function AdminPage() {
       </section>
 
       <section>
-        <h2 className="font-medium mb-3">Opprett ny serie</h2>
+        <h2 className="font-semibold text-neutral-900 border-b-2 border-indigo-600 inline-block pb-1 mb-3">
+          Opprett ny serie
+        </h2>
         <form
           action={createSerie}
-          className="bg-white border border-neutral-200 rounded-md p-4 space-y-4 max-w-md"
+          className="bg-white border border-neutral-200 rounded-lg p-4 space-y-4 max-w-md shadow-sm"
         >
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="navn">
@@ -128,7 +132,7 @@ export default async function AdminPage() {
           </div>
           <button
             type="submit"
-            className="bg-neutral-900 text-white rounded px-4 py-2 text-sm font-medium hover:bg-neutral-700"
+            className="bg-indigo-700 text-white rounded px-4 py-2 text-sm font-semibold hover:bg-indigo-800"
           >
             Opprett serie
           </button>

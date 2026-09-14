@@ -21,10 +21,10 @@ export default async function RedigerRundePage({
 
   return (
     <div>
-      <h1 className="text-xl font-semibold mb-1">
+      <h1 className="text-2xl font-bold text-neutral-900 mb-1">
         Rediger runde {runde.rundenummer} – {runde.serie.navn}
       </h1>
-      <p className="text-sm text-neutral-500 mb-6">
+      <p className="text-sm text-neutral-700 mb-6">
         Endringer her logges med tidspunkt og valgfri kommentar, og vises
         nederst på rundens offentlige side.
       </p>

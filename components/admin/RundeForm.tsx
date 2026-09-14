@@ -136,7 +136,7 @@ export function RundeForm(
   return (
     <div className="space-y-8">
       <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="dato">
+        <label className="block text-sm font-medium text-neutral-900 mb-1" htmlFor="dato">
           Dato
         </label>
         <input
@@ -144,25 +144,26 @@ export function RundeForm(
           type="date"
           value={dato}
           onChange={(e) => setDato(e.target.value)}
-          className="border border-neutral-300 rounded px-3 py-2 text-sm"
+          className="border border-neutral-300 rounded px-3 py-2 text-sm text-neutral-900"
         />
       </div>
 
       <div>
-        <h2 className="font-medium mb-2">1. Velg deltakere</h2>
-        <div className="bg-white border border-neutral-200 rounded-md p-4 grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+        <h2 className="font-semibold text-neutral-900 mb-2">1. Velg deltakere</h2>
+        <div className="bg-white border border-neutral-200 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 shadow-sm">
           {spillere.map((s) => (
-            <label key={s.id} className="flex items-center gap-2 text-sm">
+            <label key={s.id} className="flex items-center gap-2 text-sm text-neutral-900">
               <input
                 type="checkbox"
                 checked={valgte.has(s.id)}
                 onChange={() => toggleSpiller(s.id)}
+                className="h-4 w-4 accent-indigo-700"
               />
               {s.navn}
             </label>
           ))}
           {spillere.length === 0 && (
-            <p className="text-sm text-neutral-500 col-span-full">
+            <p className="text-sm text-neutral-700 col-span-full">
               Ingen spillere registrert ennå.
             </p>
           )}
@@ -172,12 +173,12 @@ export function RundeForm(
             value={nyttNavn}
             onChange={(e) => setNyttNavn(e.target.value)}
             placeholder="Navn på ny spiller"
-            className="border border-neutral-300 rounded px-3 py-2 text-sm flex-1 max-w-xs"
+            className="border border-neutral-300 rounded px-3 py-2 text-sm text-neutral-900 flex-1 max-w-xs"
           />
           <button
             type="button"
             onClick={leggTilSpiller}
-            className="border border-neutral-300 rounded px-3 py-2 text-sm hover:bg-neutral-100"
+            className="border border-indigo-700 text-indigo-700 rounded px-3 py-2 text-sm font-medium hover:bg-indigo-50"
           >
             Legg til spiller
           </button>
@@ -186,15 +187,17 @@ export function RundeForm(
 
       {valgteSpillere.length > 0 && (
         <div>
-          <h2 className="font-medium mb-2">2. Registrer poengforskjell per kamp</h2>
+          <h2 className="font-semibold text-neutral-900 mb-2">
+            2. Registrer poengforskjell per kamp
+          </h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm bg-white border border-neutral-200 rounded-md">
+            <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left">
-                  <th className="px-3 py-2">Spiller</th>
-                  <th className="px-3 py-2">Kamp 1</th>
-                  <th className="px-3 py-2">Kamp 2</th>
-                  <th className="px-3 py-2">Kamp 3</th>
+                  <th className="px-3 py-2 text-neutral-700">Spiller</th>
+                  <th className="px-3 py-2 text-neutral-700">Kamp 1</th>
+                  <th className="px-3 py-2 text-neutral-700">Kamp 2</th>
+                  <th className="px-3 py-2 text-neutral-700">Kamp 3</th>
                 </tr>
               </thead>
               <tbody>
@@ -202,7 +205,7 @@ export function RundeForm(
                   const rad = scores[s.id] ?? ["", "", ""];
                   return (
                     <tr key={s.id} className="border-b border-neutral-100 last:border-0">
-                      <td className="px-3 py-2">{s.navn}</td>
+                      <td className="px-3 py-2 font-medium text-neutral-900">{s.navn}</td>
                       {[0, 1, 2].map((i) => (
                         <td key={i} className="px-3 py-2">
                           <input
@@ -213,7 +216,7 @@ export function RundeForm(
                             }
                             min={-poengGrense}
                             max={poengGrense}
-                            className="w-20 border border-neutral-300 rounded px-2 py-1"
+                            className="w-20 border border-neutral-300 rounded px-2 py-1.5 text-neutral-900 font-medium focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none"
                           />
                         </td>
                       ))}
@@ -223,7 +226,7 @@ export function RundeForm(
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-neutral-500 mt-2">
+          <p className="text-sm text-neutral-700 mt-2">
             Positivt tall = vant kampen, negativt tall = tapte kampen.
           </p>
         </div>
@@ -231,7 +234,7 @@ export function RundeForm(
 
       {mode === "rediger" && (
         <div>
-          <label className="block text-sm font-medium mb-1" htmlFor="kommentar">
+          <label className="block text-sm font-medium text-neutral-900 mb-1" htmlFor="kommentar">
             Kommentar (hvorfor retter du denne runden?)
           </label>
           <textarea
@@ -240,13 +243,13 @@ export function RundeForm(
             onChange={(e) => setKommentar(e.target.value)}
             placeholder="F.eks. «Feilregistrert kamp 2 for Marius, skulle vært +7 ikke -7»"
             rows={2}
-            className="w-full border border-neutral-300 rounded px-3 py-2 text-sm"
+            className="w-full border border-neutral-300 rounded px-3 py-2 text-sm text-neutral-900"
           />
         </div>
       )}
 
       {feilmelding && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+        <p className="text-sm font-medium text-red-800 bg-red-50 border border-red-300 rounded px-3 py-2">
           {feilmelding}
         </p>
       )}
@@ -255,7 +258,7 @@ export function RundeForm(
         type="button"
         onClick={validerOgLagre}
         disabled={pending}
-        className="bg-neutral-900 text-white rounded px-4 py-2 text-sm font-medium hover:bg-neutral-700 disabled:opacity-50"
+        className="bg-indigo-700 text-white rounded px-4 py-2 text-sm font-semibold hover:bg-indigo-800 disabled:opacity-50"
       >
         {pending ? "Lagrer…" : mode === "ny" ? "Lagre runde" : "Lagre retting"}
       </button>

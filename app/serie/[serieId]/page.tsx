@@ -93,25 +93,25 @@ export default async function SeriePage({
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-xl font-semibold">{serie.navn}</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-2xl font-bold text-neutral-900">{serie.navn}</h1>
+        <p className="text-sm text-neutral-700">
           Poeng til {serie.poengGrense} · beste {serie.antallTellendeRunder} runder
           teller · {serie.status}
         </p>
       </div>
 
       {serierekord.length > 0 && (
-        <section className="bg-white border border-neutral-200 rounded-md px-4 py-3">
-          <h2 className="text-xs font-medium text-neutral-500 uppercase mb-1">
-            Serierekord
+        <section className="bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 shadow-sm">
+          <h2 className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-1">
+            🏆 Serierekord
           </h2>
           {serierekord.map((r) => (
-            <div key={`${r.spillerNavn}-${r.rundeId}`} className="text-sm">
-              <span className="font-medium">{r.spillerNavn}</span> – {r.sumSeire} seire,{" "}
-              {formatPoeng(r.sumPoengforskjell)} poeng{" "}
+            <div key={`${r.spillerNavn}-${r.rundeId}`} className="text-sm text-neutral-900">
+              <span className="font-bold">{r.spillerNavn}</span> – {r.sumSeire} seire,{" "}
+              <span className="font-semibold">{formatPoeng(r.sumPoengforskjell)} poeng</span>{" "}
               <Link
                 href={`/serie/${serie.id}/runde/${r.rundeId}`}
-                className="text-neutral-500 hover:underline"
+                className="text-rose-700 hover:underline"
               >
                 (runde {r.rundenummer} · {new Date(r.dato).toLocaleDateString("no-NO")})
               </Link>
@@ -121,47 +121,49 @@ export default async function SeriePage({
       )}
 
       <section>
-        <h2 className="font-medium mb-3">Sesongtabell</h2>
+        <h2 className="font-semibold text-neutral-900 border-b-2 border-indigo-600 inline-block pb-1 mb-3">
+          Sesongtabell
+        </h2>
         {sesongtabell.length === 0 ? (
-          <p className="text-sm text-neutral-500">Ingen fullførte runder ennå.</p>
+          <p className="text-sm text-neutral-700">Ingen fullførte runder ennå.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm bg-white border border-neutral-200 rounded-md">
+            <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
               <thead>
                 <tr className="text-left">
-                  <th className="px-3 py-2 border-b border-neutral-200" rowSpan={2}>
+                  <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
                     #
                   </th>
-                  <th className="px-3 py-2 border-b border-neutral-200" rowSpan={2}>
+                  <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
                     Spiller
                   </th>
                   <th
-                    className="px-3 py-2 bg-blue-50 text-blue-900 text-center border-b border-blue-100"
+                    className="px-3 py-2 bg-indigo-100 text-indigo-900 font-semibold text-center border-b border-indigo-200"
                     colSpan={2}
                   >
                     Tellende runder – {serie.antallTellendeRunder}
                   </th>
                   <th
-                    className="px-3 py-2 bg-neutral-100 text-neutral-500 text-center border-b border-neutral-200"
+                    className="px-3 py-2 bg-neutral-100 text-neutral-700 font-semibold text-center border-b border-neutral-300"
                     colSpan={2}
                   >
                     Alle runder – {serie.runder.length}
                   </th>
-                  <th className="px-3 py-2 border-b border-neutral-200" rowSpan={2}>
+                  <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
                     Runder spilt
                   </th>
                 </tr>
                 <tr className="text-left">
-                  <th className="px-3 py-2 bg-blue-50 text-blue-900 border-b border-blue-100">
+                  <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
                     Snitt seire
                   </th>
-                  <th className="px-3 py-2 bg-blue-50 text-blue-900 border-b border-blue-100">
+                  <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
                     Poeng
                   </th>
-                  <th className="px-3 py-2 bg-neutral-100 text-neutral-500 border-b border-neutral-200">
+                  <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
                     Snitt seire
                   </th>
-                  <th className="px-3 py-2 bg-neutral-100 text-neutral-500 border-b border-neutral-200">
+                  <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
                     Poeng
                   </th>
                 </tr>
@@ -169,17 +171,21 @@ export default async function SeriePage({
               <tbody>
                 {sesongtabell.map((s, i) => (
                   <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
-                    <td className="px-3 py-2">{i + 1}</td>
-                    <td className="px-3 py-2 font-medium">{s.spillerNavn}</td>
-                    <td className="px-3 py-2 bg-blue-50/50">{s.blokkA.snittSeire.toFixed(2)}</td>
-                    <td className="px-3 py-2 bg-blue-50/50">{s.blokkA.totaltPoeng}</td>
-                    <td className="px-3 py-2 bg-neutral-50 text-neutral-500">
+                    <td className="px-3 py-2 text-neutral-900">{i + 1}</td>
+                    <td className="px-3 py-2 font-semibold text-neutral-900">{s.spillerNavn}</td>
+                    <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
+                      {s.blokkA.snittSeire.toFixed(2)}
+                    </td>
+                    <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
+                      {s.blokkA.totaltPoeng}
+                    </td>
+                    <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
                       {s.blokkB.snittSeire.toFixed(2)}
                     </td>
-                    <td className="px-3 py-2 bg-neutral-50 text-neutral-500">
+                    <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
                       {s.blokkB.totaltPoeng}
                     </td>
-                    <td className="px-3 py-2">{s.antallSpilteRunder}</td>
+                    <td className="px-3 py-2 text-neutral-900">{s.antallSpilteRunder}</td>
                   </tr>
                 ))}
               </tbody>
@@ -189,11 +195,13 @@ export default async function SeriePage({
       </section>
 
       <section>
-        <h2 className="font-medium mb-3">Rundehistorikk</h2>
+        <h2 className="font-semibold text-neutral-900 border-b-2 border-indigo-600 inline-block pb-1 mb-3">
+          Rundehistorikk
+        </h2>
         {serie.runder.length === 0 ? (
-          <p className="text-sm text-neutral-500">Ingen runder registrert ennå.</p>
+          <p className="text-sm text-neutral-700">Ingen runder registrert ennå.</p>
         ) : (
-          <ul className="divide-y divide-neutral-200 border border-neutral-200 rounded-md bg-white">
+          <ul className="divide-y divide-neutral-200 border border-neutral-200 rounded-lg bg-white shadow-sm">
             {serie.runder.map((runde) => {
               const topp3 = rangerRunde(
                 runde.deltakelser.map((d) => ({
@@ -210,13 +218,16 @@ export default async function SeriePage({
                     href={`/serie/${serie.id}/runde/${runde.id}`}
                     className="flex items-start justify-between gap-4 px-4 py-3 hover:bg-neutral-50"
                   >
-                    <span>
+                    <span className="font-medium text-neutral-900">
                       Runde {runde.rundenummer} ·{" "}
                       {new Date(runde.dato).toLocaleDateString("no-NO")}
                     </span>
-                    <div className="text-xs text-neutral-500 text-right space-y-0.5">
+                    <div className="text-sm text-neutral-700 text-right space-y-0.5">
                       {topp3.map((r) => (
-                        <div key={r.spillerId}>
+                        <div
+                          key={r.spillerId}
+                          className={r.plass === 1 ? "font-bold text-rose-700" : undefined}
+                        >
                           {r.plass}. {r.spillerNavn} ({r.sumSeire},{" "}
                           {formatPoeng(r.sumPoengforskjell)})
                         </div>

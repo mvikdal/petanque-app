@@ -24,13 +24,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="no"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">
-        <header className="border-b border-neutral-200 bg-white">
+      <body className="min-h-full flex flex-col bg-neutral-100 text-neutral-900">
+        <header className="bg-indigo-950">
           <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
-            <Link href="/" className="font-semibold">
+            <Link href="/" className="font-semibold text-white text-lg">
               Petanque Seriespill
             </Link>
-            <Link href="/admin" className="text-sm text-neutral-500 hover:text-neutral-900">
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-indigo-200 hover:text-white"
+            >
               Admin
             </Link>
           </div>
