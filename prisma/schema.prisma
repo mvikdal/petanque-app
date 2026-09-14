@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Spiller {
+  id          String       @id @default(cuid())
+  navn        String
+  opprettet   DateTime     @default(now())
+  deltakelser Deltakelse[]
+}
+
+model Serie {
+  id                   String   @id @default(cuid())
+  navn                 String
+  ukedager             String // kommaseparert, f.eks. "mandag,onsdag" - kun til visning
+  sesongStart          DateTime
+  sesongSlutt          DateTime?
+  poengGrense          Int      @default(13)
+  antallTellendeRunder Int      @default(12)
+  status               String   @default("aktiv") // "aktiv" | "avsluttet"
+  opprettet            DateTime @default(now())
+  runder               Runde[]
+}
+
+model Runde {
+  id           String       @id @default(cuid())
+  serieId      String
+  serie        Serie        @relation(fields: [serieId], references: [id], onDelete: Cascade)
+  dato         DateTime
+  rundenummer  Int
+  deltakelser  Deltakelse[]
+  opprettet    DateTime     @default(now())
+
+  @@unique([serieId, rundenummer])
+}
+
+// En rad = én spillers resultat i én runde. Runden opprettes i databasen
+// først når admin sender inn det fullstendige skjemaet for kvelden (§4.5
+// i spec: alt-eller-ingenting, ingen delvis lagring) - selve Runde-raden
+// og alle Deltakelse-rader lagres derfor i samme transaksjon.
+model Deltakelse {
+  id        String  @id @default(cuid())
+  spillerId String
+  spiller   Spiller @relation(fields: [spillerId], references: [id])
+  rundeId   String
+  runde     Runde   @relation(fields: [rundeId], references: [id], onDelete: Cascade)
+
+  kamp1 Int // signert poengforskjell, positiv = vant
+  kamp2 Int
+  kamp3 Int
+
+  @@unique([spillerId, rundeId])
+}
