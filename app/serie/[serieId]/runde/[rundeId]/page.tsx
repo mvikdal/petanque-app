@@ -14,6 +14,7 @@ export default async function RundePage({
     include: {
       serie: true,
       deltakelser: { include: { spiller: true } },
+      endringer: { orderBy: { tidspunkt: "desc" } },
     },
   });
   if (!runde || runde.serieId !== serieId) notFound();
@@ -71,6 +72,23 @@ export default async function RundePage({
           </tbody>
         </table>
       </div>
+
+      {runde.endringer.length > 0 && (
+        <div className="text-sm text-neutral-500 border-t border-neutral-200 pt-4">
+          <p className="font-medium text-neutral-700 mb-2">Rettet i etterkant</p>
+          <ul className="space-y-1">
+            {runde.endringer.map((e) => (
+              <li key={e.id}>
+                {new Date(e.tidspunkt).toLocaleString("no-NO", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+                {e.kommentar ? ` – ${e.kommentar}` : " – (ingen kommentar)"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

@@ -55,13 +55,11 @@ export type NyDeltakelseInput = {
   kamp3: number;
 };
 
-export async function createRunde(
+async function validerDeltakelser(
   serieId: string,
-  dato: string,
+  poengGrense: number,
   deltakelser: NyDeltakelseInput[]
 ) {
-  const serie = await prisma.serie.findUniqueOrThrow({ where: { id: serieId } });
-
   if (deltakelser.length === 0) {
     throw new Error("Minst én spiller må delta i runden");
   }
@@ -75,13 +73,23 @@ export async function createRunde(
 
   for (const d of deltakelser) {
     for (const kamp of [d.kamp1, d.kamp2, d.kamp3]) {
-      if (!erGyldigPoengforskjell(kamp, serie.poengGrense)) {
+      if (!erGyldigPoengforskjell(kamp, poengGrense)) {
         throw new Error(
-          `Ugyldig poengforskjell (${kamp}). Må være et heltall mellom -${serie.poengGrense} og ${serie.poengGrense}, ulik 0.`
+          `Ugyldig poengforskjell (${kamp}). Må være et heltall mellom -${poengGrense} og ${poengGrense}, ulik 0.`
         );
       }
     }
   }
+}
+
+export async function createRunde(
+  serieId: string,
+  dato: string,
+  deltakelser: NyDeltakelseInput[]
+) {
+  const serie = await prisma.serie.findUniqueOrThrow({ where: { id: serieId } });
+
+  await validerDeltakelser(serieId, serie.poengGrense, deltakelser);
 
   const siste = await prisma.runde.findFirst({
     where: { serieId },
@@ -107,4 +115,60 @@ export async function createRunde(
 
   revalidatePath(`/serie/${serieId}`);
   redirect(`/serie/${serieId}/runde/${runde.id}`);
+}
+
+// Admin-mulighet for å rette en allerede lagret runde (§ ny avklaring
+// 2026-09-14) - kan gjøres på en hvilken som helst runde, uansett alder.
+// Hver retting logges i RundeEndring med tidspunkt, valgfri kommentar, og
+// en snapshot av deltakelsene slik de var før rettingen.
+export async function updateRunde(
+  rundeId: string,
+  dato: string,
+  deltakelser: NyDeltakelseInput[],
+  kommentar: string
+) {
+  const runde = await prisma.runde.findUniqueOrThrow({
+    where: { id: rundeId },
+    include: { serie: true, deltakelser: { include: { spiller: true } } },
+  });
+
+  await validerDeltakelser(runde.serieId, runde.serie.poengGrense, deltakelser);
+
+  const forrigeData = JSON.stringify(
+    runde.deltakelser.map((d) => ({
+      spillerNavn: d.spiller.navn,
+      kamp1: d.kamp1,
+      kamp2: d.kamp2,
+      kamp3: d.kamp3,
+    }))
+  );
+
+  await prisma.$transaction([
+    prisma.deltakelse.deleteMany({ where: { rundeId } }),
+    prisma.runde.update({
+      where: { id: rundeId },
+      data: {
+        dato: new Date(dato),
+        deltakelser: {
+          create: deltakelser.map((d) => ({
+            spillerId: d.spillerId,
+            kamp1: d.kamp1,
+            kamp2: d.kamp2,
+            kamp3: d.kamp3,
+          })),
+        },
+      },
+    }),
+    prisma.rundeEndring.create({
+      data: {
+        rundeId,
+        kommentar: kommentar.trim() || null,
+        forrigeData,
+      },
+    }),
+  ]);
+
+  revalidatePath(`/serie/${runde.serieId}`);
+  revalidatePath(`/serie/${runde.serieId}/runde/${rundeId}`);
+  redirect(`/serie/${runde.serieId}/runde/${rundeId}`);
 }

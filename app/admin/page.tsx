@@ -39,6 +39,12 @@ export default async function AdminPage() {
                 >
                   Ny runde
                 </Link>
+                <Link
+                  className="text-blue-600 hover:underline"
+                  href={`/admin/serie/${s.id}/runder`}
+                >
+                  Runder
+                </Link>
                 <Link className="text-neutral-500 hover:underline" href={`/serie/${s.id}`}>
                   Offentlig side
                 </Link>

@@ -128,16 +128,42 @@ export default async function SeriePage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm bg-white border border-neutral-200 rounded-md">
               <thead>
-                <tr className="border-b border-neutral-200 text-left">
-                  <th className="px-3 py-2">#</th>
-                  <th className="px-3 py-2">Spiller</th>
-                  <th className="px-3 py-2" title={`Beste ${serie.antallTellendeRunder} runder`}>
-                    Snitt seire (N)
+                <tr className="text-left">
+                  <th className="px-3 py-2 border-b border-neutral-200" rowSpan={2}>
+                    #
                   </th>
-                  <th className="px-3 py-2">Poeng (N)</th>
-                  <th className="px-3 py-2 text-neutral-400">Snitt seire (alle)</th>
-                  <th className="px-3 py-2 text-neutral-400">Poeng (alle)</th>
-                  <th className="px-3 py-2">Runder spilt</th>
+                  <th className="px-3 py-2 border-b border-neutral-200" rowSpan={2}>
+                    Spiller
+                  </th>
+                  <th
+                    className="px-3 py-2 bg-blue-50 text-blue-900 text-center border-b border-blue-100"
+                    colSpan={2}
+                  >
+                    Tellende runder – {serie.antallTellendeRunder}
+                  </th>
+                  <th
+                    className="px-3 py-2 bg-neutral-100 text-neutral-500 text-center border-b border-neutral-200"
+                    colSpan={2}
+                  >
+                    Alle runder – {serie.runder.length}
+                  </th>
+                  <th className="px-3 py-2 border-b border-neutral-200" rowSpan={2}>
+                    Runder spilt
+                  </th>
+                </tr>
+                <tr className="text-left">
+                  <th className="px-3 py-2 bg-blue-50 text-blue-900 border-b border-blue-100">
+                    Snitt seire
+                  </th>
+                  <th className="px-3 py-2 bg-blue-50 text-blue-900 border-b border-blue-100">
+                    Poeng
+                  </th>
+                  <th className="px-3 py-2 bg-neutral-100 text-neutral-500 border-b border-neutral-200">
+                    Snitt seire
+                  </th>
+                  <th className="px-3 py-2 bg-neutral-100 text-neutral-500 border-b border-neutral-200">
+                    Poeng
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -145,12 +171,14 @@ export default async function SeriePage({
                   <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
                     <td className="px-3 py-2">{i + 1}</td>
                     <td className="px-3 py-2 font-medium">{s.spillerNavn}</td>
-                    <td className="px-3 py-2">{s.blokkA.snittSeire.toFixed(2)}</td>
-                    <td className="px-3 py-2">{s.blokkA.totaltPoeng}</td>
-                    <td className="px-3 py-2 text-neutral-400">
+                    <td className="px-3 py-2 bg-blue-50/50">{s.blokkA.snittSeire.toFixed(2)}</td>
+                    <td className="px-3 py-2 bg-blue-50/50">{s.blokkA.totaltPoeng}</td>
+                    <td className="px-3 py-2 bg-neutral-50 text-neutral-500">
                       {s.blokkB.snittSeire.toFixed(2)}
                     </td>
-                    <td className="px-3 py-2 text-neutral-400">{s.blokkB.totaltPoeng}</td>
+                    <td className="px-3 py-2 bg-neutral-50 text-neutral-500">
+                      {s.blokkB.totaltPoeng}
+                    </td>
                     <td className="px-3 py-2">{s.antallSpilteRunder}</td>
                   </tr>
                 ))}

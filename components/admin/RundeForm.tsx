@@ -1,25 +1,53 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createRunde, createSpiller } from "@/app/admin/actions";
+import { createRunde, createSpiller, updateRunde } from "@/app/admin/actions";
 
 type Spiller = { id: string; navn: string };
 
 type Scores = Record<string, [string, string, string]>;
 
-export function NyRundeForm({
-  serieId,
-  poengGrense,
-  spillere: initialSpillere,
-}: {
-  serieId: string;
-  poengGrense: number;
-  spillere: Spiller[];
-}) {
+export function RundeForm(
+  props:
+    | {
+        mode: "ny";
+        serieId: string;
+        poengGrense: number;
+        spillere: Spiller[];
+      }
+    | {
+        mode: "rediger";
+        serieId: string;
+        rundeId: string;
+        poengGrense: number;
+        spillere: Spiller[];
+        initialDato: string;
+        initialDeltakelser: {
+          spillerId: string;
+          kamp1: number;
+          kamp2: number;
+          kamp3: number;
+        }[];
+      }
+) {
+  const { mode, serieId, poengGrense, spillere: initialSpillere } = props;
+
   const [spillere, setSpillere] = useState(initialSpillere);
-  const [valgte, setValgte] = useState<Set<string>>(new Set());
-  const [scores, setScores] = useState<Scores>({});
-  const [dato, setDato] = useState(() => new Date().toISOString().slice(0, 10));
+  const [valgte, setValgte] = useState<Set<string>>(
+    () => new Set(mode === "rediger" ? props.initialDeltakelser.map((d) => d.spillerId) : [])
+  );
+  const [scores, setScores] = useState<Scores>(() => {
+    if (mode !== "rediger") return {};
+    const initial: Scores = {};
+    for (const d of props.initialDeltakelser) {
+      initial[d.spillerId] = [String(d.kamp1), String(d.kamp2), String(d.kamp3)];
+    }
+    return initial;
+  });
+  const [dato, setDato] = useState(() =>
+    mode === "rediger" ? props.initialDato : new Date().toISOString().slice(0, 10)
+  );
+  const [kommentar, setKommentar] = useState("");
   const [nyttNavn, setNyttNavn] = useState("");
   const [feilmelding, setFeilmelding] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -92,7 +120,11 @@ export function NyRundeForm({
 
     startTransition(async () => {
       try {
-        await createRunde(serieId, dato, deltakelser);
+        if (mode === "ny") {
+          await createRunde(serieId, dato, deltakelser);
+        } else {
+          await updateRunde(props.rundeId, dato, deltakelser, kommentar);
+        }
       } catch (e) {
         setFeilmelding(e instanceof Error ? e.message : "Kunne ikke lagre runden.");
       }
@@ -197,6 +229,22 @@ export function NyRundeForm({
         </div>
       )}
 
+      {mode === "rediger" && (
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="kommentar">
+            Kommentar (hvorfor retter du denne runden?)
+          </label>
+          <textarea
+            id="kommentar"
+            value={kommentar}
+            onChange={(e) => setKommentar(e.target.value)}
+            placeholder="F.eks. «Feilregistrert kamp 2 for Marius, skulle vært +7 ikke -7»"
+            rows={2}
+            className="w-full border border-neutral-300 rounded px-3 py-2 text-sm"
+          />
+        </div>
+      )}
+
       {feilmelding && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
           {feilmelding}
@@ -209,7 +257,7 @@ export function NyRundeForm({
         disabled={pending}
         className="bg-neutral-900 text-white rounded px-4 py-2 text-sm font-medium hover:bg-neutral-700 disabled:opacity-50"
       >
-        {pending ? "Lagrer…" : "Lagre runde"}
+        {pending ? "Lagrer…" : mode === "ny" ? "Lagre runde" : "Lagre retting"}
       </button>
     </div>
   );

@@ -35,15 +35,30 @@ model Serie {
 }
 
 model Runde {
-  id           String       @id @default(cuid())
+  id           String         @id @default(cuid())
   serieId      String
-  serie        Serie        @relation(fields: [serieId], references: [id], onDelete: Cascade)
+  serie        Serie          @relation(fields: [serieId], references: [id], onDelete: Cascade)
   dato         DateTime
   rundenummer  Int
   deltakelser  Deltakelse[]
-  opprettet    DateTime     @default(now())
+  endringer    RundeEndring[]
+  opprettet    DateTime       @default(now())
 
   @@unique([serieId, rundenummer])
+}
+
+// Endringslogg: én rad per gang en admin retter en allerede lagret runde.
+// forrigeData er en JSON-snapshot av deltakelser-raden(e) slik de var
+// FØR denne endringen, for etterprøvbarhet. kommentar er valgfri.
+model RundeEndring {
+  id          String   @id @default(cuid())
+  rundeId     String
+  runde       Runde    @relation(fields: [rundeId], references: [id], onDelete: Cascade)
+  tidspunkt   DateTime @default(now())
+  kommentar   String?
+  forrigeData String
+
+  @@index([rundeId])
 }
 
 // En rad = én spillers resultat i én runde. Runden opprettes i databasen

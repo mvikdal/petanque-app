@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { NyRundeForm } from "./NyRundeForm";
+import { RundeForm } from "@/components/admin/RundeForm";
 
 export default async function NyRundePage({
   params,
@@ -27,7 +27,8 @@ export default async function NyRundePage({
         Runde {(sisteRunde?.rundenummer ?? 0) + 1} · poeng registreres fra -
         {serie.poengGrense} til {serie.poengGrense} (0 er ikke gyldig)
       </p>
-      <NyRundeForm
+      <RundeForm
+        mode="ny"
         serieId={serie.id}
         poengGrense={serie.poengGrense}
         spillere={spillere}
