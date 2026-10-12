@@ -1,11 +1,14 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { erGyldigPoengforskjell } from "@/lib/ranking";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function createSerie(formData: FormData) {
+  await assertAdmin();
+
   const navn = String(formData.get("navn") ?? "").trim();
   const ukedager = String(formData.get("ukedager") ?? "").trim();
   const sesongStart = String(formData.get("sesongStart") ?? "");
@@ -31,6 +34,8 @@ export async function createSerie(formData: FormData) {
 }
 
 export async function createSpiller(serieId: string, navn: string) {
+  await assertAdmin();
+
   const trimmet = navn.trim();
   if (!trimmet) {
     throw new Error("Navn kan ikke være tomt");
@@ -87,6 +92,8 @@ export async function createRunde(
   dato: string,
   deltakelser: NyDeltakelseInput[]
 ) {
+  await assertAdmin();
+
   const serie = await prisma.serie.findUniqueOrThrow({ where: { id: serieId } });
 
   await validerDeltakelser(serieId, serie.poengGrense, deltakelser);
@@ -127,6 +134,8 @@ export async function updateRunde(
   deltakelser: NyDeltakelseInput[],
   kommentar: string
 ) {
+  await assertAdmin();
+
   const runde = await prisma.runde.findUniqueOrThrow({
     where: { id: rundeId },
     include: { serie: true, deltakelser: { include: { spiller: true } } },
