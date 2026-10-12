@@ -16,9 +16,24 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Next.js prefetcher lenker (som "Admin"-lenken i header på alle
+  // offentlige sider) i bakgrunnen. En 401 med WWW-Authenticate på en slik
+  // bakgrunnsforespørsel får nettleseren til å vise innloggingsboksen oppå
+  // SIDEN BRUKEREN FAKTISK ER PÅ, selv om de aldri navigerte til /admin.
+  // Prefetch er nå skrudd av på selve lenken også (se app/layout.tsx), men
+  // vi utelater uansett WWW-Authenticate-headeren for slike forespørsler
+  // som et ekstra lag - innholdet blokkeres fortsatt (401), bare uten å
+  // trigge nettleserens native dialog.
+  const erPrefetch =
+    request.headers.get("next-router-prefetch") === "1" ||
+    request.headers.get("purpose") === "prefetch" ||
+    request.headers.get("sec-purpose")?.includes("prefetch");
+
   return new NextResponse("Autentisering nødvendig", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Admin"' },
+    headers: erPrefetch
+      ? {}
+      : { "WWW-Authenticate": 'Basic realm="Admin"' },
   });
 }
 

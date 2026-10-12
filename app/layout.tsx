@@ -32,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
             <Link
               href="/admin"
+              prefetch={false}
               className="text-sm font-medium text-indigo-200 hover:text-white"
             >
               Admin

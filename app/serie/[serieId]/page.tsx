@@ -8,6 +8,7 @@ import {
   sammenlignRundeResultat,
   type SpillerMedRunder,
 } from "@/lib/ranking";
+import { TabellToggle } from "@/components/TabellToggle";
 
 function formatPoeng(p: number) {
   return p > 0 ? `+${p}` : String(p);
@@ -90,6 +91,36 @@ export default async function SeriePage({
     }
   }
 
+  // Totaltabell: spiller × runde-matrise med rått resultat for hver spilte
+  // runde (ingen aggregering). Rundene vises eldst-til-nyest, spillerne
+  // alfabetisk. Vinneren(e) av hver runde markeres - likt-resultat deles
+  // tiebreak-korrekt (samme logikk som serierekord over).
+  type MatriseCelle = { sumSeire: number; sumPoengforskjell: number; vant: boolean };
+  const matrise = new Map<string, Map<string, MatriseCelle>>();
+  const runderStigende = [...serie.runder].sort((a, b) => a.rundenummer - b.rundenummer);
+
+  for (const runde of runderStigende) {
+    const resultaterIRunden = runde.deltakelser.map((d) => ({
+      spillerId: d.spillerId,
+      resultat: beregnRundeResultat(d),
+    }));
+    let besteResultat = resultaterIRunden[0]?.resultat ?? null;
+    for (const { resultat } of resultaterIRunden) {
+      if (besteResultat && sammenlignRundeResultat(resultat, besteResultat) < 0) {
+        besteResultat = resultat;
+      }
+    }
+    for (const { spillerId, resultat } of resultaterIRunden) {
+      const vant = besteResultat !== null && sammenlignRundeResultat(resultat, besteResultat) === 0;
+      if (!matrise.has(spillerId)) matrise.set(spillerId, new Map());
+      matrise.get(spillerId)!.set(runde.id, { ...resultat, vant });
+    }
+  }
+
+  const spillereAlfabetisk = Array.from(perSpiller.values())
+    .map((s) => ({ spillerId: s.spillerId, spillerNavn: s.spillerNavn }))
+    .sort((a, b) => a.spillerNavn.localeCompare(b.spillerNavn, "no"));
+
   return (
     <div className="space-y-10">
       <div>
@@ -120,79 +151,133 @@ export default async function SeriePage({
         </section>
       )}
 
-      <section>
-        <h2 className="font-semibold text-neutral-900 border-b-2 border-indigo-600 inline-block pb-1 mb-3">
-          Sesongtabell
-        </h2>
-        {sesongtabell.length === 0 ? (
-          <p className="text-sm text-neutral-700">Ingen fullførte runder ennå.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
-              <thead>
-                <tr className="text-left">
-                  <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
-                    #
-                  </th>
-                  <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
-                    Spiller
-                  </th>
-                  <th
-                    className="px-3 py-2 bg-indigo-100 text-indigo-900 font-semibold text-center border-b border-indigo-200"
-                    colSpan={2}
-                  >
-                    Tellende runder – {serie.antallTellendeRunder}
-                  </th>
-                  <th
-                    className="px-3 py-2 bg-neutral-100 text-neutral-700 font-semibold text-center border-b border-neutral-300"
-                    colSpan={2}
-                  >
-                    Alle runder – {serie.runder.length}
-                  </th>
-                  <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
-                    Runder spilt
-                  </th>
-                </tr>
-                <tr className="text-left">
-                  <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
-                    Snitt seire
-                  </th>
-                  <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
-                    Poeng
-                  </th>
-                  <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
-                    Snitt seire
-                  </th>
-                  <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
-                    Poeng
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sesongtabell.map((s, i) => (
-                  <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
-                    <td className="px-3 py-2 text-neutral-900">{i + 1}</td>
-                    <td className="px-3 py-2 font-semibold text-neutral-900">{s.spillerNavn}</td>
-                    <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
-                      {s.blokkA.snittSeire.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
-                      {s.blokkA.totaltPoeng}
-                    </td>
-                    <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
-                      {s.blokkB.snittSeire.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
-                      {s.blokkB.totaltPoeng}
-                    </td>
-                    <td className="px-3 py-2 text-neutral-900">{s.antallSpilteRunder}</td>
+      <TabellToggle
+        sesongtabell={
+          sesongtabell.length === 0 ? (
+            <p className="text-sm text-neutral-700">Ingen fullførte runder ennå.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
+                <thead>
+                  <tr className="text-left">
+                    <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
+                      #
+                    </th>
+                    <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
+                      Spiller
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-indigo-100 text-indigo-900 font-semibold text-center border-b border-indigo-200"
+                      colSpan={2}
+                    >
+                      Tellende runder – {serie.antallTellendeRunder}
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-neutral-100 text-neutral-700 font-semibold text-center border-b border-neutral-300"
+                      colSpan={2}
+                    >
+                      Alle runder – {serie.runder.length}
+                    </th>
+                    <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
+                      Runder spilt
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                  <tr className="text-left">
+                    <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
+                      Snitt seire
+                    </th>
+                    <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
+                      Poeng
+                    </th>
+                    <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
+                      Snitt seire
+                    </th>
+                    <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
+                      Poeng
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sesongtabell.map((s, i) => (
+                    <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
+                      <td className="px-3 py-2 text-neutral-900">{i + 1}</td>
+                      <td className="px-3 py-2 font-semibold text-neutral-900">{s.spillerNavn}</td>
+                      <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
+                        {s.blokkA.snittSeire.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
+                        {s.blokkA.totaltPoeng}
+                      </td>
+                      <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
+                        {s.blokkB.snittSeire.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
+                        {s.blokkB.totaltPoeng}
+                      </td>
+                      <td className="px-3 py-2 text-neutral-900">{s.antallSpilteRunder}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
+        totaltabell={
+          spillereAlfabetisk.length === 0 ? (
+            <p className="text-sm text-neutral-700">Ingen fullførte runder ennå.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
+                <thead>
+                  <tr className="text-left">
+                    <th className="sticky left-0 bg-neutral-50 px-3 py-2 border-b border-neutral-200 text-neutral-700">
+                      Spiller
+                    </th>
+                    {runderStigende.map((runde) => (
+                      <th
+                        key={runde.id}
+                        className="px-3 py-2 border-b border-neutral-200 text-neutral-700 text-center whitespace-nowrap"
+                      >
+                        <div>R{runde.rundenummer}</div>
+                        <div className="text-[10px] font-normal text-neutral-500">
+                          {new Date(runde.dato).toLocaleDateString("no-NO", {
+                            day: "2-digit",
+                            month: "2-digit",
+                          })}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {spillereAlfabetisk.map((s) => (
+                    <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
+                      <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-neutral-900 whitespace-nowrap">
+                        {s.spillerNavn}
+                      </td>
+                      {runderStigende.map((runde) => {
+                        const celle = matrise.get(s.spillerId)?.get(runde.id);
+                        return (
+                          <td
+                            key={runde.id}
+                            className={`px-3 py-2 text-center whitespace-nowrap ${
+                              celle?.vant ? "bg-green-100 font-semibold text-green-900" : "text-neutral-900"
+                            }`}
+                          >
+                            {celle
+                              ? `${celle.sumSeire} ${formatPoeng(celle.sumPoengforskjell)}`
+                              : ""}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
+      />
 
       <section>
         <h2 className="font-semibold text-neutral-900 border-b-2 border-indigo-600 inline-block pb-1 mb-3">
