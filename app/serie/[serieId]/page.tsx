@@ -92,12 +92,16 @@ export default async function SeriePage({
   }
 
   // Totaltabell: spiller × runde-matrise med rått resultat for hver spilte
-  // runde (ingen aggregering). Rundene vises eldst-til-nyest, spillerne
-  // alfabetisk. Vinneren(e) av hver runde markeres - likt-resultat deles
+  // runde (ingen aggregering). Rundene vises eldst-til-nyest etter DATO
+  // (ikke rundenummer - en rettet dato kan avvike fra rekkefølgen
+  // rundene opprinnelig ble opprettet i), spillerne alfabetisk.
+  // Vinneren(e) av hver runde markeres - likt-resultat deles
   // tiebreak-korrekt (samme logikk som serierekord over).
   type MatriseCelle = { sumSeire: number; sumPoengforskjell: number; vant: boolean };
   const matrise = new Map<string, Map<string, MatriseCelle>>();
-  const runderStigende = [...serie.runder].sort((a, b) => a.rundenummer - b.rundenummer);
+  const runderStigende = [...serie.runder].sort(
+    (a, b) => a.dato.getTime() - b.dato.getTime()
+  );
 
   for (const runde of runderStigende) {
     const resultaterIRunden = runde.deltakelser.map((d) => ({
@@ -170,7 +174,7 @@ export default async function SeriePage({
                       className="px-3 py-2 bg-indigo-100 text-indigo-900 font-semibold text-center border-b border-indigo-200"
                       colSpan={2}
                     >
-                      Tellende runder – {serie.antallTellendeRunder}
+                      Tellende runder – Beste {serie.antallTellendeRunder}
                     </th>
                     <th
                       className="px-3 py-2 bg-neutral-100 text-neutral-700 font-semibold text-center border-b border-neutral-300"
@@ -238,12 +242,14 @@ export default async function SeriePage({
                         key={runde.id}
                         className="px-3 py-2 border-b border-neutral-200 text-neutral-700 text-center whitespace-nowrap"
                       >
-                        <div>R{runde.rundenummer}</div>
-                        <div className="text-[10px] font-normal text-neutral-500">
+                        <div>
                           {new Date(runde.dato).toLocaleDateString("no-NO", {
                             day: "2-digit",
                             month: "2-digit",
                           })}
+                        </div>
+                        <div className="text-[10px] font-normal text-neutral-500">
+                          R{runde.rundenummer}
                         </div>
                       </th>
                     ))}

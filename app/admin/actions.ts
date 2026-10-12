@@ -121,6 +121,9 @@ export async function createRunde(
   });
 
   revalidatePath(`/serie/${serieId}`);
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath(`/admin/serie/${serieId}/runder`);
   redirect(`/serie/${serieId}/runde/${runde.id}`);
 }
 
@@ -179,5 +182,6 @@ export async function updateRunde(
 
   revalidatePath(`/serie/${runde.serieId}`);
   revalidatePath(`/serie/${runde.serieId}/runde/${rundeId}`);
+  revalidatePath(`/admin/serie/${runde.serieId}/runder`);
   redirect(`/serie/${runde.serieId}/runde/${rundeId}`);
 }
