@@ -3,10 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { rangerRunde } from "@/lib/ranking";
 
-function ScoreCell({ verdi }: { verdi: number }) {
+function ScoreCell({ verdi, kursiv = false }: { verdi: number | null; kursiv?: boolean }) {
+  if (verdi === null) {
+    return <span className="text-neutral-400">–</span>;
+  }
   const farge = verdi > 0 ? "text-emerald-700" : "text-rose-700";
   return (
-    <span className={`font-semibold ${farge}`}>
+    <span className={`font-semibold ${farge} ${kursiv ? "italic" : ""}`}>
       {verdi > 0 ? `+${verdi}` : verdi}
     </span>
   );
@@ -60,6 +63,7 @@ export default async function RundePage({
               <th className="px-3 py-2 text-neutral-700">Kamp 3</th>
               <th className="px-3 py-2 text-neutral-700">Seire</th>
               <th className="px-3 py-2 text-neutral-700">Poengforskjell</th>
+              <th className="px-3 py-2 text-neutral-700"></th>
             </tr>
           </thead>
           <tbody>
@@ -73,17 +77,26 @@ export default async function RundePage({
                 <td className="px-3 py-2 font-semibold text-neutral-900">{r.plass}</td>
                 <td className="px-3 py-2 font-semibold text-neutral-900">{r.spillerNavn}</td>
                 <td className="px-3 py-2">
-                  <ScoreCell verdi={r.kamp1} />
+                  <ScoreCell verdi={r.kamp1} kursiv={!r.erFullstendig} />
                 </td>
                 <td className="px-3 py-2">
-                  <ScoreCell verdi={r.kamp2} />
+                  <ScoreCell verdi={r.kamp2} kursiv={!r.erFullstendig} />
                 </td>
                 <td className="px-3 py-2">
-                  <ScoreCell verdi={r.kamp3} />
+                  <ScoreCell verdi={r.kamp3} kursiv={!r.erFullstendig} />
                 </td>
-                <td className="px-3 py-2 font-medium text-neutral-900">{r.sumSeire}</td>
+                <td
+                  className={`px-3 py-2 font-medium text-neutral-900 ${
+                    r.erFullstendig ? "" : "italic"
+                  }`}
+                >
+                  {r.sumSeire}
+                </td>
                 <td className="px-3 py-2">
-                  <ScoreCell verdi={r.sumPoengforskjell} />
+                  <ScoreCell verdi={r.sumPoengforskjell} kursiv={!r.erFullstendig} />
+                </td>
+                <td className="px-3 py-2 text-xs text-neutral-500 italic">
+                  {!r.erFullstendig && "ufullstendig"}
                 </td>
               </tr>
             ))}

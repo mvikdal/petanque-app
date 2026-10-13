@@ -80,9 +80,9 @@ export async function createSpiller(serieId: string, navn: string) {
 
 export type NyDeltakelseInput = {
   spillerId: string;
-  kamp1: number;
-  kamp2: number;
-  kamp3: number;
+  kamp1: number | null;
+  kamp2: number | null;
+  kamp3: number | null;
 };
 
 async function validerDeltakelser(
@@ -102,8 +102,12 @@ async function validerDeltakelser(
   }
 
   for (const d of deltakelser) {
-    for (const kamp of [d.kamp1, d.kamp2, d.kamp3]) {
-      if (!erGyldigPoengforskjell(kamp, poengGrense)) {
+    const kamper = [d.kamp1, d.kamp2, d.kamp3];
+    if (kamper.every((k) => k === null)) {
+      throw new Error("En spiller kan ikke registreres uten resultat for minst én kamp.");
+    }
+    for (const kamp of kamper) {
+      if (kamp !== null && !erGyldigPoengforskjell(kamp, poengGrense)) {
         throw new Error(
           `Ugyldig poengforskjell (${kamp}). Må være et heltall mellom -${poengGrense} og ${poengGrense}, ulik 0.`
         );

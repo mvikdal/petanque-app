@@ -39,10 +39,7 @@ export default async function SeriePage({
         spillerNavn: d.spiller.navn,
         runder: [],
       };
-      eksisterende.runder.push({
-        sumSeire: [d.kamp1, d.kamp2, d.kamp3].filter((p) => p > 0).length,
-        sumPoengforskjell: d.kamp1 + d.kamp2 + d.kamp3,
-      });
+      eksisterende.runder.push(beregnRundeResultat(d));
       perSpiller.set(d.spillerId, eksisterende);
     }
   }
@@ -60,6 +57,7 @@ export default async function SeriePage({
     dato: Date;
     sumSeire: number;
     sumPoengforskjell: number;
+    erFullstendig: boolean;
   };
   let serierekord: Serierekord[] = [];
   for (const runde of serie.runder) {
@@ -97,7 +95,12 @@ export default async function SeriePage({
   // rundene opprinnelig ble opprettet i), spillerne alfabetisk.
   // Vinneren(e) av hver runde markeres - likt-resultat deles
   // tiebreak-korrekt (samme logikk som serierekord over).
-  type MatriseCelle = { sumSeire: number; sumPoengforskjell: number; vant: boolean };
+  type MatriseCelle = {
+    sumSeire: number;
+    sumPoengforskjell: number;
+    erFullstendig: boolean;
+    vant: boolean;
+  };
   const matrise = new Map<string, Map<string, MatriseCelle>>();
   const runderStigende = [...serie.runder].sort(
     (a, b) => a.dato.getTime() - b.dato.getTime()
@@ -142,14 +145,20 @@ export default async function SeriePage({
           </h2>
           {serierekord.map((r) => (
             <div key={`${r.spillerNavn}-${r.rundeId}`} className="text-sm text-neutral-900">
-              <span className="font-bold">{r.spillerNavn}</span> – {r.sumSeire} seire,{" "}
-              <span className="font-semibold">{formatPoeng(r.sumPoengforskjell)} poeng</span>{" "}
+              <span className="font-bold">{r.spillerNavn}</span> –{" "}
+              <span className={r.erFullstendig ? "" : "italic"}>
+                {r.sumSeire} seire,{" "}
+                <span className="font-semibold">{formatPoeng(r.sumPoengforskjell)} poeng</span>
+              </span>{" "}
               <Link
                 href={`/serie/${serie.id}/runde/${r.rundeId}`}
                 className="text-rose-700 hover:underline"
               >
                 (runde {r.rundenummer} · {new Date(r.dato).toLocaleDateString("no-NO")})
               </Link>
+              {!r.erFullstendig && (
+                <span className="text-xs text-neutral-500 italic"> – ufullstendig</span>
+              )}
             </div>
           ))}
         </section>
@@ -279,7 +288,7 @@ export default async function SeriePage({
                               celle?.vant
                                 ? "bg-green-100 font-semibold text-green-900"
                                 : `${radBakgrunn} text-neutral-900`
-                            }`}
+                            } ${celle && !celle.erFullstendig ? "italic" : ""}`}
                           >
                             {celle
                               ? `${celle.sumSeire} ${formatPoeng(celle.sumPoengforskjell)}`
@@ -331,8 +340,10 @@ export default async function SeriePage({
                           key={r.spillerId}
                           className={r.plass === 1 ? "font-bold text-rose-700" : undefined}
                         >
-                          {r.plass}. {r.spillerNavn} ({r.sumSeire},{" "}
-                          {formatPoeng(r.sumPoengforskjell)})
+                          {r.plass}. {r.spillerNavn}{" "}
+                          <span className={r.erFullstendig ? "" : "italic"}>
+                            ({r.sumSeire}, {formatPoeng(r.sumPoengforskjell)})
+                          </span>
                         </div>
                       ))}
                     </div>

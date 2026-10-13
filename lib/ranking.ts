@@ -1,22 +1,27 @@
 // Ren beregningslogikk for seriespill, se docs/petanque-seriespill-spec.md §5-6.
 // Ingen avhengighet til Prisma-typer, slik at funksjonene er lette å teste isolert.
 
+// En spiller har ikke alltid anledning til å spille alle 3 kampene i en
+// runde (avklart 2026-10-13) - null betyr "ikke spilt", ikke 0-1-0 tap.
 export type KampResultat = {
-  kamp1: number;
-  kamp2: number;
-  kamp3: number;
+  kamp1: number | null;
+  kamp2: number | null;
+  kamp3: number | null;
 };
 
 export type RundeResultat = {
-  sumSeire: number; // 0-3
-  sumPoengforskjell: number; // signert sum over 3 kamper
+  sumSeire: number; // 0-3, kun av spilte kamper
+  sumPoengforskjell: number; // signert sum over de spilte kampene
+  erFullstendig: boolean; // true kun hvis alle 3 kampene er spilt
 };
 
 export function beregnRundeResultat(k: KampResultat): RundeResultat {
   const kamper = [k.kamp1, k.kamp2, k.kamp3];
+  const spilteKamper = kamper.filter((p): p is number => p !== null);
   return {
-    sumSeire: kamper.filter((p) => p > 0).length,
-    sumPoengforskjell: kamper.reduce((sum, p) => sum + p, 0),
+    sumSeire: spilteKamper.filter((p) => p > 0).length,
+    sumPoengforskjell: spilteKamper.reduce((sum, p) => sum + p, 0),
+    erFullstendig: spilteKamper.length === 3,
   };
 }
 

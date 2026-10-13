@@ -24,9 +24,9 @@ export function RundeForm(
         initialDato: string;
         initialDeltakelser: {
           spillerId: string;
-          kamp1: number;
-          kamp2: number;
-          kamp3: number;
+          kamp1: number | null;
+          kamp2: number | null;
+          kamp3: number | null;
         }[];
       }
 ) {
@@ -40,7 +40,11 @@ export function RundeForm(
     if (mode !== "rediger") return {};
     const initial: Scores = {};
     for (const d of props.initialDeltakelser) {
-      initial[d.spillerId] = [String(d.kamp1), String(d.kamp2), String(d.kamp3)];
+      initial[d.spillerId] = [
+        d.kamp1 === null ? "" : String(d.kamp1),
+        d.kamp2 === null ? "" : String(d.kamp2),
+        d.kamp3 === null ? "" : String(d.kamp3),
+      ];
     }
     return initial;
   });
@@ -96,21 +100,31 @@ export function RundeForm(
       return;
     }
 
-    const deltakelser: { spillerId: string; kamp1: number; kamp2: number; kamp3: number }[] = [];
+    const deltakelser: {
+      spillerId: string;
+      kamp1: number | null;
+      kamp2: number | null;
+      kamp3: number | null;
+    }[] = [];
 
     for (const spillerId of valgte) {
-      const rad = scores[spillerId];
-      if (!rad || rad.some((v) => v.trim() === "")) {
-        const navn = spillere.find((s) => s.id === spillerId)?.navn ?? spillerId;
-        setFeilmelding(`${navn} mangler resultat for alle 3 kamper.`);
+      const rad = scores[spillerId] ?? ["", "", ""];
+      const navn = spillere.find((s) => s.id === spillerId)?.navn ?? spillerId;
+
+      if (rad.every((v) => v.trim() === "")) {
+        setFeilmelding(`${navn} mangler resultat for minst én kamp.`);
         return;
       }
-      const tall = rad.map((v) => Number(v)) as [number, number, number];
+
+      const tall = rad.map((v) => {
+        if (v.trim() === "") return null;
+        return Number(v);
+      }) as [number | null, number | null, number | null];
+
       for (const t of tall) {
-        if (!Number.isInteger(t) || t === 0 || Math.abs(t) > poengGrense) {
-          const navn = spillere.find((s) => s.id === spillerId)?.navn ?? spillerId;
+        if (t !== null && (!Number.isInteger(t) || t === 0 || Math.abs(t) > poengGrense)) {
           setFeilmelding(
-            `${navn} har en ugyldig poengforskjell. Må være et heltall mellom -${poengGrense} og ${poengGrense}, ulik 0.`
+            `${navn} har en ugyldig poengforskjell. Må være et heltall mellom -${poengGrense} og ${poengGrense}, ulik 0, eller stå tomt hvis kampen ikke ble spilt.`
           );
           return;
         }
@@ -216,6 +230,7 @@ export function RundeForm(
                             }
                             min={-poengGrense}
                             max={poengGrense}
+                            placeholder="–"
                             className="w-20 border border-neutral-300 rounded px-2 py-1.5 text-neutral-900 font-medium focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none"
                           />
                         </td>
@@ -227,7 +242,9 @@ export function RundeForm(
             </table>
           </div>
           <p className="text-sm text-neutral-700 mt-2">
-            Positivt tall = vant kampen, negativt tall = tapte kampen.
+            Positivt tall = vant kampen, negativt tall = tapte kampen. La et
+            felt stå tomt hvis spilleren ikke fikk spilt den kampen -
+            resultatet vises da i kursiv som ufullstendig.
           </p>
         </div>
       )}

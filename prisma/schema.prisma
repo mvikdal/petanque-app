@@ -84,9 +84,12 @@ model Deltakelse {
   rundeId   String
   runde     Runde   @relation(fields: [rundeId], references: [id], onDelete: Cascade)
 
-  kamp1 Int // signert poengforskjell, positiv = vant
-  kamp2 Int
-  kamp3 Int
+  // Null = spilleren fikk ikke spilt denne kampen (avklart 2026-10-13),
+  // ikke et tap - minst én av de tre må være satt for at deltakelsen
+  // skal gi mening.
+  kamp1 Int? // signert poengforskjell, positiv = vant
+  kamp2 Int?
+  kamp3 Int?
 
   @@unique([spillerId, rundeId])
 }
