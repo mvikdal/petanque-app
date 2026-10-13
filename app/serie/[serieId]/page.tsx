@@ -203,7 +203,12 @@ export default async function SeriePage({
                 </thead>
                 <tbody>
                   {sesongtabell.map((s, i) => (
-                    <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
+                    <tr
+                      key={s.spillerId}
+                      className={`border-b border-neutral-100 last:border-0 ${
+                        i % 2 === 1 ? "bg-neutral-50" : ""
+                      }`}
+                    >
                       <td className="px-3 py-2 text-neutral-900">{i + 1}</td>
                       <td className="px-3 py-2 font-semibold text-neutral-900">{s.spillerNavn}</td>
                       <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
@@ -256,9 +261,13 @@ export default async function SeriePage({
                   </tr>
                 </thead>
                 <tbody>
-                  {spillereAlfabetisk.map((s) => (
+                  {spillereAlfabetisk.map((s, i) => {
+                    const radBakgrunn = i % 2 === 1 ? "bg-neutral-50" : "bg-white";
+                    return (
                     <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
-                      <td className="sticky left-0 bg-white px-3 py-2 font-semibold text-neutral-900 whitespace-nowrap">
+                      <td
+                        className={`sticky left-0 ${radBakgrunn} px-3 py-2 font-semibold text-neutral-900 whitespace-nowrap`}
+                      >
                         {s.spillerNavn}
                       </td>
                       {runderStigende.map((runde) => {
@@ -267,7 +276,9 @@ export default async function SeriePage({
                           <td
                             key={runde.id}
                             className={`px-3 py-2 text-center whitespace-nowrap ${
-                              celle?.vant ? "bg-green-100 font-semibold text-green-900" : "text-neutral-900"
+                              celle?.vant
+                                ? "bg-green-100 font-semibold text-green-900"
+                                : `${radBakgrunn} text-neutral-900`
                             }`}
                           >
                             {celle
@@ -277,7 +288,8 @@ export default async function SeriePage({
                         );
                       })}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

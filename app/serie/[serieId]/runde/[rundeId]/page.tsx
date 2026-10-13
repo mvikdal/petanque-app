@@ -63,11 +63,11 @@ export default async function RundePage({
             </tr>
           </thead>
           <tbody>
-            {rangert.map((r) => (
+            {rangert.map((r, i) => (
               <tr
                 key={r.spillerId}
                 className={`border-b border-neutral-100 last:border-0 ${
-                  r.plass === 1 ? "bg-rose-50" : ""
+                  r.plass === 1 ? "bg-rose-50" : i % 2 === 1 ? "bg-neutral-50" : ""
                 }`}
               >
                 <td className="px-3 py-2 font-semibold text-neutral-900">{r.plass}</td>
