@@ -20,6 +20,10 @@ export default async function AdminPage() {
           offentlige sidene.{" "}
           <Link href="/admin/klubber" className="text-indigo-700 font-medium hover:underline">
             Administrer klubber →
+          </Link>{" "}
+          ·{" "}
+          <Link href="/admin/guide" className="text-indigo-700 font-medium hover:underline">
+            Brukerguide →
           </Link>
         </p>
       </section>
