@@ -20,6 +20,16 @@ model Spiller {
   @@unique([serieId, navn])
 }
 
+// Toppnivå-inndeling over serier (lagt til 2026-10-13). Admin for klubber
+// er en egen seksjon (/admin/klubber), separat fra den vanlige
+// serie/runde-administrasjonen, men låst med samme admin-passord.
+model Klubb {
+  id        String   @id @default(cuid())
+  navn      String   @unique
+  opprettet DateTime @default(now())
+  serier    Serie[]
+}
+
 model Serie {
   id                   String   @id @default(cuid())
   navn                 String
@@ -30,6 +40,8 @@ model Serie {
   antallTellendeRunder Int      @default(12)
   status               String   @default("aktiv") // "aktiv" | "avsluttet"
   opprettet            DateTime @default(now())
+  klubbId              String
+  klubb                Klubb    @relation(fields: [klubbId], references: [id], onDelete: Cascade)
   runder               Runde[]
   spillere             Spiller[]
 }

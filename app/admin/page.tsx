@@ -3,10 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { createSerie } from "./actions";
 
 export default async function AdminPage() {
-  const serier = await prisma.serie.findMany({
-    orderBy: { opprettet: "desc" },
-    include: { _count: { select: { runder: true } } },
-  });
+  const [serier, klubber] = await Promise.all([
+    prisma.serie.findMany({
+      orderBy: { opprettet: "desc" },
+      include: { _count: { select: { runder: true } }, klubb: true },
+    }),
+    prisma.klubb.findMany({ orderBy: { navn: "asc" } }),
+  ]);
 
   return (
     <div className="space-y-10">
@@ -14,7 +17,10 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-bold text-neutral-900 mb-4">Admin</h1>
         <p className="text-sm text-neutral-700">
           Beskyttet med admin-passord. Denne siden er ikke lenket fra de
-          offentlige sidene.
+          offentlige sidene.{" "}
+          <Link href="/admin/klubber" className="text-indigo-700 font-medium hover:underline">
+            Administrer klubber →
+          </Link>
         </p>
       </section>
 
@@ -31,7 +37,8 @@ export default async function AdminPage() {
               <div>
                 <div className="font-semibold text-neutral-900">{s.navn}</div>
                 <div className="text-sm text-neutral-600">
-                  {s._count.runder} runde(r) · poeng til {s.poengGrense} · {s.status}
+                  {s.klubb.navn} · {s._count.runder} runde(r) · poeng til {s.poengGrense} ·{" "}
+                  {s.status}
                 </div>
               </div>
               <div className="flex gap-3 text-sm">
@@ -75,6 +82,34 @@ export default async function AdminPage() {
               placeholder="Mandag/Onsdag-serien"
               className="w-full border border-neutral-300 rounded px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1" htmlFor="klubbId">
+              Klubb
+            </label>
+            {klubber.length === 0 ? (
+              <p className="text-sm text-red-700">
+                Ingen klubber opprettet ennå.{" "}
+                <Link href="/admin/klubber" className="underline">
+                  Opprett en klubb først
+                </Link>
+                .
+              </p>
+            ) : (
+              <select
+                id="klubbId"
+                name="klubbId"
+                required
+                defaultValue={klubber[0].id}
+                className="w-full border border-neutral-300 rounded px-3 py-2 text-sm"
+              >
+                {klubber.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.navn}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="ukedager">

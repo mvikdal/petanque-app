@@ -10,18 +10,20 @@ export async function createSerie(formData: FormData) {
   await assertAdmin();
 
   const navn = String(formData.get("navn") ?? "").trim();
+  const klubbId = String(formData.get("klubbId") ?? "");
   const ukedager = String(formData.get("ukedager") ?? "").trim();
   const sesongStart = String(formData.get("sesongStart") ?? "");
   const poengGrense = Number(formData.get("poengGrense") ?? 13);
   const antallTellendeRunder = Number(formData.get("antallTellendeRunder") ?? 12);
 
-  if (!navn || !sesongStart) {
-    throw new Error("Navn og sesongstart er obligatorisk");
+  if (!navn || !klubbId || !sesongStart) {
+    throw new Error("Navn, klubb og sesongstart er obligatorisk");
   }
 
   await prisma.serie.create({
     data: {
       navn,
+      klubbId,
       ukedager,
       sesongStart: new Date(sesongStart),
       poengGrense,
@@ -29,6 +31,29 @@ export async function createSerie(formData: FormData) {
     },
   });
 
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+// Klubb-administrasjon (lagt til 2026-10-13) - egen seksjon under /admin,
+// men låst med samme admin-passord (avklart samme dag). Toppnivå-inndeling
+// over serier; foreløpig kun én klubb, men flere skal kunne opprettes.
+export async function createKlubb(formData: FormData) {
+  await assertAdmin();
+
+  const navn = String(formData.get("navn") ?? "").trim();
+  if (!navn) {
+    throw new Error("Navn er obligatorisk");
+  }
+
+  const finnesAllerede = await prisma.klubb.findUnique({ where: { navn } });
+  if (finnesAllerede) {
+    throw new Error(`Klubben "${navn}" finnes allerede.`);
+  }
+
+  await prisma.klubb.create({ data: { navn } });
+
+  revalidatePath("/admin/klubber");
   revalidatePath("/admin");
   revalidatePath("/");
 }
