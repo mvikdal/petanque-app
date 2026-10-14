@@ -13,6 +13,7 @@ export type RundeResultat = {
   sumSeire: number; // 0-3, kun av spilte kamper
   sumPoengforskjell: number; // signert sum over de spilte kampene
   erFullstendig: boolean; // true kun hvis alle 3 kampene er spilt
+  antallKamper: number; // 0-3, antall kamper faktisk spilt
 };
 
 export function beregnRundeResultat(k: KampResultat): RundeResultat {
@@ -22,6 +23,7 @@ export function beregnRundeResultat(k: KampResultat): RundeResultat {
     sumSeire: spilteKamper.filter((p) => p > 0).length,
     sumPoengforskjell: spilteKamper.reduce((sum, p) => sum + p, 0),
     erFullstendig: spilteKamper.length === 3,
+    antallKamper: spilteKamper.length,
   };
 }
 
@@ -76,6 +78,7 @@ export type SpillerSesongResultat = {
   spillerId: string;
   spillerNavn: string;
   antallSpilteRunder: number;
+  antallSpilteKamper: number;
   blokkA: SpillerSesongBlokk; // beste N runder - grunnlag for rangering
   blokkB: SpillerSesongBlokk; // alle spilte runder - kun til sammenligning
   besteRunde: RundeResultat; // personlig rekord i serien
@@ -113,6 +116,7 @@ export function beregnSesongtabell(
         spillerId: s.spillerId,
         spillerNavn: s.spillerNavn,
         antallSpilteRunder: s.runder.length,
+        antallSpilteKamper: s.runder.reduce((sum, r) => sum + r.antallKamper, 0),
         blokkA: beregnBlokk(besteN),
         blokkB: beregnBlokk(sortert),
         besteRunde: sortert[0],

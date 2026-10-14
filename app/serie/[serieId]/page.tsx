@@ -7,6 +7,7 @@ import {
   finnRundevinnere,
   rangerRunde,
   sammenlignRundeResultat,
+  type RundeResultat,
   type SpillerMedRunder,
 } from "@/lib/ranking";
 import { TabellToggle } from "@/components/TabellToggle";
@@ -64,14 +65,11 @@ export default async function SeriePage({
 
   // Serierekord: beste enkeltrunde-resultat (sumSeire, deretter sumPoengforskjell)
   // registrert i serien så langt. Flere kan dele rekorden.
-  type Serierekord = {
+  type Serierekord = RundeResultat & {
     spillerNavn: string;
     rundeId: string;
     rundenummer: number;
     dato: Date;
-    sumSeire: number;
-    sumPoengforskjell: number;
-    erFullstendig: boolean;
   };
   let serierekord: Serierekord[] = [];
   for (const runde of serie.runder) {
@@ -218,12 +216,9 @@ export default async function SeriePage({
                     >
                       Alle runder – {serie.runder.length}
                     </th>
-                    <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
-                      Runder spilt
-                    </th>
                     <th
                       className="px-3 py-2 bg-green-100 text-green-900 font-semibold text-center border-b border-green-200"
-                      colSpan={3}
+                      colSpan={5}
                     >
                       Statistikk
                     </th>
@@ -240,6 +235,18 @@ export default async function SeriePage({
                     </th>
                     <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
                       Poeng
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Runder spilt"
+                    >
+                      📅
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Kamper spilt"
+                    >
+                      🎯
                     </th>
                     <th
                       className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
@@ -280,7 +287,12 @@ export default async function SeriePage({
                       <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
                         {s.blokkB.totaltPoeng}
                       </td>
-                      <td className="px-3 py-2 text-neutral-900">{s.antallSpilteRunder}</td>
+                      <td className="px-3 py-2 bg-green-50 text-center text-neutral-900">
+                        {s.antallSpilteRunder}
+                      </td>
+                      <td className="px-3 py-2 bg-green-50 text-center text-neutral-900">
+                        {s.antallSpilteKamper}
+                      </td>
                       <StatistikkTall verdi={statistikk.get(s.spillerId)?.seiere ?? 0} />
                       <StatistikkTall verdi={statistikk.get(s.spillerId)?.treere ?? 0} />
                       <td
@@ -294,6 +306,13 @@ export default async function SeriePage({
                   ))}
                 </tbody>
               </table>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-700">
+                <span>📅 Runder spilt</span>
+                <span>🎯 Kamper spilt</span>
+                <span>🏆 Rundeseiere (delt seier teller for alle)</span>
+                <span>3-ere: runder med 3 seire</span>
+                <span className="italic">Kursiv: ikke alle 3 kampene spilt</span>
+              </div>
             </div>
           )
         }
