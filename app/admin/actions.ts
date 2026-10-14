@@ -35,6 +35,39 @@ export async function createSerie(formData: FormData) {
   revalidatePath("/");
 }
 
+// Redigering av en eksisterende serie (lagt til 2026-10-14). Poenggrensen
+// kan ikke endres her, siden allerede lagrede resultater er validert mot den.
+// Endret antall tellende runder slår straks inn i sesongtabellen, fordi
+// rangeringen alltid beregnes på nytt fra rundene.
+export async function updateSerie(serieId: string, formData: FormData) {
+  await assertAdmin();
+
+  const navn = String(formData.get("navn") ?? "").trim();
+  const ukedager = String(formData.get("ukedager") ?? "").trim();
+  const antallTellendeRunder = Number(formData.get("antallTellendeRunder"));
+  const status = String(formData.get("status") ?? "");
+
+  if (!navn) {
+    throw new Error("Navn er obligatorisk");
+  }
+  if (!Number.isInteger(antallTellendeRunder) || antallTellendeRunder < 1) {
+    throw new Error("Tellende runder må være et heltall på minst 1");
+  }
+  if (status !== "aktiv" && status !== "avsluttet") {
+    throw new Error("Ugyldig status");
+  }
+
+  await prisma.serie.update({
+    where: { id: serieId },
+    data: { navn, ukedager, antallTellendeRunder, status },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath(`/serie/${serieId}`);
+  redirect("/admin");
+}
+
 // Klubb-administrasjon (lagt til 2026-10-13) - egen seksjon under /admin,
 // men låst med samme admin-passord (avklart samme dag). Toppnivå-inndeling
 // over serier; foreløpig kun én klubb, men flere skal kunne opprettes.

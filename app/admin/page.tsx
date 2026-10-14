@@ -16,8 +16,7 @@ export default async function AdminPage() {
       <section>
         <h1 className="text-2xl font-bold text-neutral-900 mb-4">Admin</h1>
         <p className="text-sm text-neutral-700">
-          Beskyttet med admin-passord. Denne siden er ikke lenket fra de
-          offentlige sidene.{" "}
+          Beskyttet med admin-passord.{" "}
           <Link href="/admin/klubber" className="text-indigo-700 font-medium hover:underline">
             Administrer klubber →
           </Link>{" "}
@@ -41,8 +40,8 @@ export default async function AdminPage() {
               <div>
                 <div className="font-semibold text-neutral-900">{s.navn}</div>
                 <div className="text-sm text-neutral-600">
-                  {s.klubb.navn} · {s._count.runder} runde(r) · poeng til {s.poengGrense} ·{" "}
-                  {s.status}
+                  {s.klubb.navn} · {s._count.runder} runde(r) · poeng til {s.poengGrense} · beste{" "}
+                  {s.antallTellendeRunder} teller · {s.status}
                 </div>
               </div>
               <div className="flex gap-3 text-sm">
@@ -57,6 +56,12 @@ export default async function AdminPage() {
                   href={`/admin/serie/${s.id}/runder`}
                 >
                   Runder
+                </Link>
+                <Link
+                  className="text-indigo-700 font-medium hover:underline"
+                  href={`/admin/serie/${s.id}/rediger`}
+                >
+                  Rediger
                 </Link>
                 <Link className="text-neutral-600 hover:underline" href={`/serie/${s.id}`}>
                   Offentlig side

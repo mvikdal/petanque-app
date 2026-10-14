@@ -200,10 +200,16 @@ export default async function SeriePage({
               <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
                 <thead>
                   <tr className="text-left">
-                    <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
+                    <th
+                      className="sticky left-0 z-10 w-10 min-w-10 bg-white px-3 py-2 border-b border-neutral-200 text-neutral-700"
+                      rowSpan={2}
+                    >
                       #
                     </th>
-                    <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
+                    <th
+                      className="sticky left-10 z-10 bg-white px-3 py-2 border-b border-neutral-200 text-neutral-700"
+                      rowSpan={2}
+                    >
                       Spiller
                     </th>
                     <th
@@ -271,15 +277,23 @@ export default async function SeriePage({
                   </tr>
                 </thead>
                 <tbody>
-                  {sesongtabell.map((s, i) => (
+                  {sesongtabell.map((s, i) => {
+                    // Plass og navn holdes fast ved horisontal scrolling (som i
+                    // «Alle runder»), og trenger derfor egen, tett bakgrunn.
+                    const radBakgrunn = i % 2 === 1 ? "bg-neutral-50" : "bg-white";
+                    return (
                     <tr
                       key={s.spillerId}
-                      className={`border-b border-neutral-100 last:border-0 ${
-                        i % 2 === 1 ? "bg-neutral-50" : ""
-                      }`}
+                      className={`border-b border-neutral-100 last:border-0 ${radBakgrunn}`}
                     >
-                      <td className="px-3 py-2 text-neutral-900">{i + 1}</td>
-                      <td className="px-3 py-2 font-semibold text-neutral-900">{s.spillerNavn}</td>
+                      <td className={`sticky left-0 w-10 min-w-10 ${radBakgrunn} px-3 py-2 text-neutral-900`}>
+                        {i + 1}
+                      </td>
+                      <td
+                        className={`sticky left-10 ${radBakgrunn} px-3 py-2 font-semibold text-neutral-900 whitespace-nowrap`}
+                      >
+                        {s.spillerNavn}
+                      </td>
                       <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
                         {s.blokkA.snittSeire.toFixed(2)}
                       </td>
@@ -313,7 +327,8 @@ export default async function SeriePage({
                         </Link>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-700">
