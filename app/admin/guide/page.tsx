@@ -45,8 +45,8 @@ export default function AdminGuidePage() {
           <li>
             <strong>Serieside</strong> – viser serierekord, og en veksling mellom to tabeller:
             <ul className="list-disc list-inside ml-5 mt-1 space-y-1">
-              <li><strong>Sesongtabell</strong> – rangert på snitt seire og poeng, med egne kolonner for «beste N runder» (tellende) og «alle runder». Til slutt kommer «Statistikk»: runder spilt (📅), kamper spilt (🎯 – kan være færre enn 3 per runde hvis en spiller må gå), antall rundeseiere (🏆, delt seier teller for alle), antall 3-ere (runder med 3 seire) og spillerens beste runde. Symbolene er forklart under tabellen.</li>
-              <li><strong>Totaltabell</strong> – en matrise med alle spillere og alle runder, der du ser hver enkelt runde-score direkte. Rundevinneren er markert med sterk grønn, og alle med 3 seire i runden med lys grønn.</li>
+              <li><strong>Sesongtabell</strong> – rangert på snitt seire og poeng, med egne kolonner for «beste N runder» (tellende) og «alle runder». Til slutt kommer «Statistikk»: runder spilt (📅), kamper spilt (🎯 – kan være færre enn 3 per runde hvis en spiller må gå), antall rundeseiere (🏆, delt seier teller for alle), antall 3-ere (runder med 3 seire) og spillerens beste runde (⭐ – klikk på resultatet for å åpne runden). Symbolene er forklart under tabellen.</li>
+              <li><strong>Alle runder</strong> – en matrise med alle spillere og alle runder, der du ser hver enkelt runde-score direkte. Rundevinneren er markert med sterk grønn, og alle med 3 seire i runden med lys grønn. Runder som er strøket (ikke blant de beste N) er gjennomstreket, og spillerens svakeste tellende runde – den en ny runde må slå – har rød bakgrunn. Den røde markeringen vises først når spilleren har spilt minst N runder.</li>
             </ul>
           </li>
           <li><strong>Rundeside</strong> – detaljert resultat for én runde, alle spilleres 3 kamper.</li>
@@ -55,8 +55,7 @@ export default function AdminGuidePage() {
 
       <Seksjon tittel="Admin (krever passord)">
         <p>
-          Admin-sidene (<code>/admin</code> og underliggende sider) krever admin-passord.
-          De er ikke lenket fra de offentlige sidene.
+          Admin-sidene (<code>/admin</code> og underliggende sider) krever admin-passord. Du kommer dit via tannhjulet øverst til høyre.
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li><strong>Admin → Klubber</strong> – opprett nye klubber.</li>

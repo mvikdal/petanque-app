@@ -54,7 +54,7 @@ export default async function SeriePage({
         spillerNavn: d.spiller.navn,
         runder: [],
       };
-      eksisterende.runder.push(beregnRundeResultat(d));
+      eksisterende.runder.push({ ...beregnRundeResultat(d), rundeId: runde.id });
       perSpiller.set(d.spillerId, eksisterende);
     }
   }
@@ -149,6 +149,8 @@ export default async function SeriePage({
     statistikk.set(spillerId, { seiere, treere });
   }
 
+  const sesongPerSpiller = new Map(sesongtabell.map((s) => [s.spillerId, s]));
+
   const spillereAlfabetisk = Array.from(perSpiller.values())
     .map((s) => ({ spillerId: s.spillerId, spillerNavn: s.spillerNavn }))
     .sort((a, b) => a.spillerNavn.localeCompare(b.spillerNavn, "no"));
@@ -164,8 +166,8 @@ export default async function SeriePage({
       </div>
 
       {serierekord.length > 0 && (
-        <section className="bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 shadow-sm">
-          <h2 className="text-xs font-bold text-rose-700 uppercase tracking-wide mb-1">
+        <section className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 shadow-sm">
+          <h2 className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
             🏆 Serierekord
           </h2>
           {serierekord.map((r) => (
@@ -177,7 +179,7 @@ export default async function SeriePage({
               </span>{" "}
               <Link
                 href={`/serie/${serie.id}/runde/${r.rundeId}`}
-                className="text-rose-700 hover:underline"
+                className="text-amber-800 hover:underline"
               >
                 (runde {r.rundenummer} · {new Date(r.dato).toLocaleDateString("no-NO")})
               </Link>
@@ -260,8 +262,11 @@ export default async function SeriePage({
                     >
                       3-ere
                     </th>
-                    <th className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 whitespace-nowrap">
-                      Beste runde
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Beste runde – klikk for å åpne runden"
+                    >
+                      ⭐
                     </th>
                   </tr>
                 </thead>
@@ -296,11 +301,16 @@ export default async function SeriePage({
                       <StatistikkTall verdi={statistikk.get(s.spillerId)?.seiere ?? 0} />
                       <StatistikkTall verdi={statistikk.get(s.spillerId)?.treere ?? 0} />
                       <td
-                        className={`px-3 py-2 bg-green-50 text-neutral-900 whitespace-nowrap ${
+                        className={`px-3 py-2 bg-green-50 text-center whitespace-nowrap ${
                           s.besteRunde.erFullstendig ? "" : "italic"
                         }`}
                       >
-                        {s.besteRunde.sumSeire} {formatPoeng(s.besteRunde.sumPoengforskjell)}
+                        <Link
+                          href={`/serie/${serie.id}/runde/${s.besteRunde.rundeId}`}
+                          className="text-green-900 underline decoration-green-300 underline-offset-2 hover:decoration-green-700"
+                        >
+                          {s.besteRunde.sumSeire} {formatPoeng(s.besteRunde.sumPoengforskjell)}
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -309,9 +319,9 @@ export default async function SeriePage({
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-700">
                 <span>📅 Runder spilt</span>
                 <span>🎯 Kamper spilt</span>
-                <span>🏆 Rundeseiere (delt seier teller for alle)</span>
+                <span>🏆 Rundeseier</span>
                 <span>3-ere: runder med 3 seire</span>
-                <span className="italic">Kursiv: ikke alle 3 kampene spilt</span>
+                <span>⭐ Beste runde</span>
               </div>
             </div>
           )
@@ -348,6 +358,7 @@ export default async function SeriePage({
                 <tbody>
                   {spillereAlfabetisk.map((s, i) => {
                     const radBakgrunn = i % 2 === 1 ? "bg-neutral-50" : "bg-white";
+                    const sesong = sesongPerSpiller.get(s.spillerId);
                     return (
                     <tr key={s.spillerId} className="border-b border-neutral-100 last:border-0">
                       <td
@@ -357,16 +368,31 @@ export default async function SeriePage({
                       </td>
                       {runderStigende.map((runde) => {
                         const celle = matrise.get(s.spillerId)?.get(runde.id);
+                        const erStroket =
+                          celle !== undefined && !sesong?.tellendeRundeIder.includes(runde.id);
+                        const svakeste = sesong?.svakesteTellendeRundeId === runde.id;
+                        // Prioritet: svakeste tellende → vant → 3-er → radbakgrunn.
+                        // Strøkne runder gjennomstrekes og dempes.
+                        const farge = svakeste
+                          ? "bg-red-100 text-red-900"
+                          : celle?.vant
+                            ? "bg-green-100 font-semibold text-green-900"
+                            : celle?.treer
+                              ? "bg-green-50 text-green-900"
+                              : `${radBakgrunn} text-neutral-900`;
                         return (
                           <td
                             key={runde.id}
-                            className={`px-3 py-2 text-center whitespace-nowrap ${
-                              celle?.vant
-                                ? "bg-green-100 font-semibold text-green-900"
-                                : celle?.treer
-                                  ? "bg-green-50 text-green-900"
-                                  : `${radBakgrunn} text-neutral-900`
+                            className={`px-3 py-2 text-center whitespace-nowrap ${farge} ${
+                              erStroket ? "line-through text-neutral-400!" : ""
                             } ${celle && !celle.erFullstendig ? "italic" : ""}`}
+                            title={
+                              svakeste
+                                ? "Svakeste tellende runde"
+                                : erStroket
+                                  ? "Strøket – teller ikke"
+                                  : undefined
+                            }
                           >
                             {celle
                               ? `${celle.sumSeire} ${formatPoeng(celle.sumPoengforskjell)}`
@@ -379,7 +405,7 @@ export default async function SeriePage({
                   })}
                 </tbody>
               </table>
-              <div className="flex gap-4 mt-2 text-xs text-neutral-700">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-700">
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block w-3 h-3 rounded-sm bg-green-100 border border-green-300" />
                   Vant runden
@@ -387,6 +413,13 @@ export default async function SeriePage({
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block w-3 h-3 rounded-sm bg-green-50 border border-green-200" />
                   3 seire
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-sm bg-red-100 border border-red-300" />
+                  Svakeste tellende runde
+                </span>
+                <span>
+                  <span className="line-through text-neutral-400">2 −5</span> Strøket – teller ikke
                 </span>
               </div>
             </div>
@@ -426,7 +459,7 @@ export default async function SeriePage({
                       {topp3.map((r) => (
                         <div
                           key={r.spillerId}
-                          className={r.plass === 1 ? "font-bold text-rose-700" : undefined}
+                          className={r.plass === 1 ? "font-bold text-amber-800" : undefined}
                         >
                           {r.plass}. {r.spillerNavn}{" "}
                           <span className={r.erFullstendig ? "" : "italic"}>

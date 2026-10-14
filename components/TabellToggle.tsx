@@ -34,7 +34,7 @@ export function TabellToggle({
               : "font-semibold text-neutral-500 border-b-2 border-transparent pb-1 hover:text-neutral-700"
           }
         >
-          Totaltabell
+          Alle runder
         </button>
       </div>
       {visning === "sesong" ? sesongtabell : totaltabell}

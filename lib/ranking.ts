@@ -81,7 +81,11 @@ export type SpillerSesongResultat = {
   antallSpilteKamper: number;
   blokkA: SpillerSesongBlokk; // beste N runder - grunnlag for rangering
   blokkB: SpillerSesongBlokk; // alle spilte runder - kun til sammenligning
-  besteRunde: RundeResultat; // personlig rekord i serien
+  besteRunde: RundeResultatMedId; // personlig rekord i serien
+  tellendeRundeIder: string[]; // rundene i blokk A - resten er strøket
+  // Den svakeste tellende runden - den en ny runde må slå for å forbedre
+  // snittet. Kun satt når spilleren har spilt minst N runder.
+  svakesteTellendeRundeId: string | null;
 };
 
 function beregnBlokk(runder: RundeResultat[]): SpillerSesongBlokk {
@@ -97,10 +101,12 @@ function beregnBlokk(runder: RundeResultat[]): SpillerSesongBlokk {
   };
 }
 
+export type RundeResultatMedId = RundeResultat & { rundeId: string };
+
 export type SpillerMedRunder = {
   spillerId: string;
   spillerNavn: string;
-  runder: RundeResultat[]; // én per fullført runde spilleren deltok i
+  runder: RundeResultatMedId[]; // én per fullført runde spilleren deltok i
 };
 
 // Sesongtabell, spec §6: rangert på blokk A (beste N runder), blokk B kun informativ.
@@ -120,6 +126,11 @@ export function beregnSesongtabell(
         blokkA: beregnBlokk(besteN),
         blokkB: beregnBlokk(sortert),
         besteRunde: sortert[0],
+        tellendeRundeIder: besteN.map((r) => r.rundeId),
+        svakesteTellendeRundeId:
+          s.runder.length >= antallTellendeRunder && besteN.length > 0
+            ? besteN[besteN.length - 1].rundeId
+            : null,
       };
     })
     .sort((a, b) => {
