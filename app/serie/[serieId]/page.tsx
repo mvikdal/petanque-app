@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import {
   beregnRundeResultat,
   beregnSesongtabell,
+  finnRundevinnere,
   rangerRunde,
   sammenlignRundeResultat,
   type SpillerMedRunder,
@@ -12,6 +13,19 @@ import { TabellToggle } from "@/components/TabellToggle";
 
 function formatPoeng(p: number) {
   return p > 0 ? `+${p}` : String(p);
+}
+
+// 0 vises dempet, slik at de som faktisk har seire/3-ere skiller seg ut.
+function StatistikkTall({ verdi }: { verdi: number }) {
+  return (
+    <td
+      className={`px-3 py-2 bg-green-50 text-center ${
+        verdi > 0 ? "font-semibold text-green-900" : "text-neutral-400"
+      }`}
+    >
+      {verdi > 0 ? verdi : "–"}
+    </td>
+  );
 }
 
 export default async function SeriePage({
@@ -94,12 +108,14 @@ export default async function SeriePage({
   // (ikke rundenummer - en rettet dato kan avvike fra rekkefølgen
   // rundene opprinnelig ble opprettet i), spillerne alfabetisk.
   // Vinneren(e) av hver runde markeres - likt-resultat deles
-  // tiebreak-korrekt (samme logikk som serierekord over).
+  // tiebreak-korrekt (samme logikk som serierekord over). Alle med
+  // 3 seire («3-ere») markeres også, uavhengig av om de vant.
   type MatriseCelle = {
     sumSeire: number;
     sumPoengforskjell: number;
     erFullstendig: boolean;
     vant: boolean;
+    treer: boolean;
   };
   const matrise = new Map<string, Map<string, MatriseCelle>>();
   const runderStigende = [...serie.runder].sort(
@@ -111,17 +127,28 @@ export default async function SeriePage({
       spillerId: d.spillerId,
       resultat: beregnRundeResultat(d),
     }));
-    let besteResultat = resultaterIRunden[0]?.resultat ?? null;
-    for (const { resultat } of resultaterIRunden) {
-      if (besteResultat && sammenlignRundeResultat(resultat, besteResultat) < 0) {
-        besteResultat = resultat;
-      }
-    }
+    const vinnere = finnRundevinnere(resultaterIRunden);
     for (const { spillerId, resultat } of resultaterIRunden) {
-      const vant = besteResultat !== null && sammenlignRundeResultat(resultat, besteResultat) === 0;
       if (!matrise.has(spillerId)) matrise.set(spillerId, new Map());
-      matrise.get(spillerId)!.set(runde.id, { ...resultat, vant });
+      matrise.get(spillerId)!.set(runde.id, {
+        ...resultat,
+        vant: vinnere.has(spillerId),
+        treer: resultat.sumSeire === 3,
+      });
     }
+  }
+
+  // Statistikk til sesongtabellen, telt fra matrisen slik at «seier»
+  // betyr nøyaktig det samme som den sterke grønnfargen i totaltabellen.
+  const statistikk = new Map<string, { seiere: number; treere: number }>();
+  for (const [spillerId, celler] of matrise) {
+    let seiere = 0;
+    let treere = 0;
+    for (const celle of celler.values()) {
+      if (celle.vant) seiere++;
+      if (celle.treer) treere++;
+    }
+    statistikk.set(spillerId, { seiere, treere });
   }
 
   const spillereAlfabetisk = Array.from(perSpiller.values())
@@ -194,6 +221,12 @@ export default async function SeriePage({
                     <th className="px-3 py-2 border-b border-neutral-200 text-neutral-700" rowSpan={2}>
                       Runder spilt
                     </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 font-semibold text-center border-b border-green-200"
+                      colSpan={3}
+                    >
+                      Statistikk
+                    </th>
                   </tr>
                   <tr className="text-left">
                     <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
@@ -207,6 +240,21 @@ export default async function SeriePage({
                     </th>
                     <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
                       Poeng
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Rundeseiere – antall runder med beste resultat"
+                    >
+                      🏆
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Antall runder med 3 seire"
+                    >
+                      3-ere
+                    </th>
+                    <th className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 whitespace-nowrap">
+                      Beste runde
                     </th>
                   </tr>
                 </thead>
@@ -233,6 +281,15 @@ export default async function SeriePage({
                         {s.blokkB.totaltPoeng}
                       </td>
                       <td className="px-3 py-2 text-neutral-900">{s.antallSpilteRunder}</td>
+                      <StatistikkTall verdi={statistikk.get(s.spillerId)?.seiere ?? 0} />
+                      <StatistikkTall verdi={statistikk.get(s.spillerId)?.treere ?? 0} />
+                      <td
+                        className={`px-3 py-2 bg-green-50 text-neutral-900 whitespace-nowrap ${
+                          s.besteRunde.erFullstendig ? "" : "italic"
+                        }`}
+                      >
+                        {s.besteRunde.sumSeire} {formatPoeng(s.besteRunde.sumPoengforskjell)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -287,7 +344,9 @@ export default async function SeriePage({
                             className={`px-3 py-2 text-center whitespace-nowrap ${
                               celle?.vant
                                 ? "bg-green-100 font-semibold text-green-900"
-                                : `${radBakgrunn} text-neutral-900`
+                                : celle?.treer
+                                  ? "bg-green-50 text-green-900"
+                                  : `${radBakgrunn} text-neutral-900`
                             } ${celle && !celle.erFullstendig ? "italic" : ""}`}
                           >
                             {celle
@@ -301,6 +360,16 @@ export default async function SeriePage({
                   })}
                 </tbody>
               </table>
+              <div className="flex gap-4 mt-2 text-xs text-neutral-700">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-sm bg-green-100 border border-green-300" />
+                  Vant runden
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-sm bg-green-50 border border-green-200" />
+                  3 seire
+                </span>
+              </div>
             </div>
           )
         }

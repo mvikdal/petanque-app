@@ -45,8 +45,8 @@ export default function AdminGuidePage() {
           <li>
             <strong>Serieside</strong> – viser serierekord, og en veksling mellom to tabeller:
             <ul className="list-disc list-inside ml-5 mt-1 space-y-1">
-              <li><strong>Sesongtabell</strong> – rangert på snitt seire og poeng, med egne kolonner for «beste N runder» (tellende) og «alle runder».</li>
-              <li><strong>Totaltabell</strong> – en matrise med alle spillere og alle runder, der du ser hver enkelt runde-score direkte.</li>
+              <li><strong>Sesongtabell</strong> – rangert på snitt seire og poeng, med egne kolonner for «beste N runder» (tellende) og «alle runder». Til slutt kommer «Statistikk»: antall rundeseiere (🏆, delt seier teller for alle), antall 3-ere (runder med 3 seire) og spillerens beste runde.</li>
+              <li><strong>Totaltabell</strong> – en matrise med alle spillere og alle runder, der du ser hver enkelt runde-score direkte. Rundevinneren er markert med sterk grønn, og alle med 3 seire i runden med lys grønn.</li>
             </ul>
           </li>
           <li><strong>Rundeside</strong> – detaljert resultat for én runde, alle spilleres 3 kamper.</li>

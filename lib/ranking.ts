@@ -31,6 +31,25 @@ export function sammenlignRundeResultat(a: RundeResultat, b: RundeResultat): num
   return b.sumPoengforskjell - a.sumPoengforskjell;
 }
 
+// Vinner(e) av én runde: alle med beste resultat - likt resultat gir delt seier.
+export function finnRundevinnere(
+  resultater: { spillerId: string; resultat: RundeResultat }[]
+): Set<string> {
+  let beste: RundeResultat | null = null;
+  for (const { resultat } of resultater) {
+    if (beste === null || sammenlignRundeResultat(resultat, beste) < 0) {
+      beste = resultat;
+    }
+  }
+  const vinnerResultat = beste;
+  if (vinnerResultat === null) return new Set();
+  return new Set(
+    resultater
+      .filter(({ resultat }) => sammenlignRundeResultat(resultat, vinnerResultat) === 0)
+      .map(({ spillerId }) => spillerId)
+  );
+}
+
 export type SpillerIRunde = {
   spillerId: string;
   spillerNavn: string;
@@ -59,6 +78,7 @@ export type SpillerSesongResultat = {
   antallSpilteRunder: number;
   blokkA: SpillerSesongBlokk; // beste N runder - grunnlag for rangering
   blokkB: SpillerSesongBlokk; // alle spilte runder - kun til sammenligning
+  besteRunde: RundeResultat; // personlig rekord i serien
 };
 
 function beregnBlokk(runder: RundeResultat[]): SpillerSesongBlokk {
@@ -95,6 +115,7 @@ export function beregnSesongtabell(
         antallSpilteRunder: s.runder.length,
         blokkA: beregnBlokk(besteN),
         blokkB: beregnBlokk(sortert),
+        besteRunde: sortert[0],
       };
     })
     .sort((a, b) => {
