@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 
@@ -31,7 +32,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-neutral-100 text-neutral-900">
         <header className="bg-indigo-950">
           <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
-            <Link href="/" className="font-semibold text-white text-lg">
+            <Link href="/" className="flex items-center gap-3 font-semibold text-white text-lg">
+              <Image
+                src="/sinsen-logo.png"
+                alt="Sinsen Petanque"
+                width={36}
+                height={36}
+                loading="eager"
+              />
               Petanque Seriespill
             </Link>
             <Link
