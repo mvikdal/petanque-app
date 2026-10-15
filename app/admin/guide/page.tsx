@@ -49,7 +49,7 @@ export default function AdminGuidePage() {
               <li><strong>Alle runder</strong> – en matrise med alle spillere og alle runder, der du ser hver enkelt runde-score direkte. Rundevinneren er markert med sterk grønn, og alle med 3 seire i runden med lys grønn. Runder som er strøket (ikke blant de beste N) er gjennomstreket, og spillerens svakeste tellende runde – den en ny runde må slå – har rød bakgrunn. Den røde markeringen vises først når spilleren har spilt minst N runder.</li>
             </ul>
           </li>
-          <li><strong>Rundeside</strong> – detaljert resultat for én runde, alle spilleres 3 kamper.</li>
+          <li><strong>Rundeside</strong> – detaljert resultat for én runde, alle spilleres 3 kamper. Øverst står en automatisk oppsummering: antall deltakere, 1., 2. og 3. plass med resultat (delte plasser regnes 1, 1, 3, og alle på en delt plass nevnes), ny eller tangert serierekord, nye personlige rekorder, ukens klatrer (den eller de som steg flest plasser) og til slutt hvem som leder sesongtabellen. Kolonnen «Klatring» lengst til høyre viser hvor mange plasser hver spiller steg (▲) eller sank (▼) i sesongtabellen med denne runden; tom betyr uendret, «ny» betyr spillerens første runde.</li>
         </ul>
       </Seksjon>
 

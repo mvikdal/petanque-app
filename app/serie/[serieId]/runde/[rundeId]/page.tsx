@@ -1,7 +1,14 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { rangerRunde } from "@/lib/ranking";
+import {
+  beregnRundeoppsummering,
+  rangerRunde,
+  type PlassBevegelse,
+  type RundeResultat,
+  type Rundeoppsummering,
+} from "@/lib/ranking";
 
 function ScoreCell({ verdi, kursiv = false }: { verdi: number | null; kursiv?: boolean }) {
   if (verdi === null) {
@@ -15,6 +22,124 @@ function ScoreCell({ verdi, kursiv = false }: { verdi: number | null; kursiv?: b
   );
 }
 
+function formatPoeng(p: number) {
+  return p > 0 ? `+${p}` : String(p);
+}
+
+function formatResultat(r: RundeResultat) {
+  return `${r.sumSeire} ${formatPoeng(r.sumPoengforskjell)}`;
+}
+
+// "Anne", "Anne og Bjørn", "Anne, Bjørn og Cecilie"
+function listeNavn(navn: string[]) {
+  if (navn.length <= 1) return navn.join("");
+  return `${navn.slice(0, -1).join(", ")} og ${navn[navn.length - 1]}`;
+}
+
+function plasser(antall: number) {
+  return antall === 1 ? "plass" : "plasser";
+}
+
+// Endring i sesongtabellen etter runden. Uendret plassering vises ikke.
+function BevegelseCelle({ bevegelse }: { bevegelse: PlassBevegelse | undefined }) {
+  if (!bevegelse) return null;
+  if (bevegelse.før === null) {
+    return (
+      <span className="text-xs text-neutral-400" title={`Første runde – ${bevegelse.etter}. plass`}>
+        ny
+      </span>
+    );
+  }
+  const endring = bevegelse.før - bevegelse.etter;
+  if (endring === 0) return null;
+  const tittel = `Fra ${bevegelse.før}. til ${bevegelse.etter}. plass`;
+  return endring > 0 ? (
+    <span className="font-semibold text-green-700 whitespace-nowrap" title={tittel}>
+      ▲ {endring}
+    </span>
+  ) : (
+    <span className="font-semibold text-red-700 whitespace-nowrap" title={tittel}>
+      ▼ {-endring}
+    </span>
+  );
+}
+
+function Oppsummering({ o }: { o: Rundeoppsummering }) {
+  const setninger: ReactNode[] = [];
+
+  setninger.push(<>{o.antallDeltakere} deltakere.</>);
+
+  const medaljer: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+  for (const p of o.pall) {
+    setninger.push(
+      <>
+        {medaljer[p.plass]} {p.plass}. plass: <strong>{listeNavn(p.spillerNavn)}</strong> –{" "}
+        {p.resultat.sumSeire} {p.resultat.sumSeire === 1 ? "seier" : "seire"},{" "}
+        {formatPoeng(p.resultat.sumPoengforskjell)}
+        {p.plass === 1 && o.serierekord === "ny" && ". Ny serierekord!"}
+        {p.plass === 1 && o.serierekord === "tangert" && ". Tangerte serierekorden."}
+      </>
+    );
+  }
+
+  if (o.personligeRekorder.length > 0) {
+    setninger.push(
+      <>
+        ⭐ Ny personlig rekord:{" "}
+        {listeNavn(
+          o.personligeRekorder.map((p) => `${p.spillerNavn} (${formatResultat(p.resultat)})`)
+        )}
+        .
+      </>
+    );
+  }
+
+  if (o.ukensKlatrere.length === 1) {
+    const k = o.ukensKlatrere[0];
+    setninger.push(
+      <>
+        📈 Ukens klatrer: <strong>{k.spillerNavn}</strong>, opp {k.opp} {plasser(k.opp)} til{" "}
+        {k.plassEtter}. plass.
+      </>
+    );
+  } else if (o.ukensKlatrere.length > 1) {
+    const opp = o.ukensKlatrere[0].opp;
+    setninger.push(
+      <>
+        📈 Ukens klatrere: <strong>{listeNavn(o.ukensKlatrere.map((k) => k.spillerNavn))}</strong>,
+        opp {opp} {plasser(opp)}.
+      </>
+    );
+  }
+
+  if (o.leder && !o.erFørsteRunde) {
+    setninger.push(
+      o.leder.før !== o.leder.etter ? (
+        <>
+          Ny leder i sesongtabellen: <strong>{o.leder.etter}</strong>.
+        </>
+      ) : (
+        <>{o.leder.etter} leder fortsatt sesongtabellen.</>
+      )
+    );
+  }
+
+  if (setninger.length === 0) return null;
+
+  return (
+    <section className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 shadow-sm">
+      <h2 className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
+        Oppsummering
+      </h2>
+      <ul className="text-sm text-neutral-900 space-y-0.5">
+        {setninger.map((s, i) => (
+          <li key={i}>{s}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default async function RundePage({
   params,
 }: {
@@ -24,7 +149,11 @@ export default async function RundePage({
   const runde = await prisma.runde.findUnique({
     where: { id: rundeId },
     include: {
-      serie: true,
+      serie: {
+        include: {
+          runder: { include: { deltakelser: { include: { spiller: true } } } },
+        },
+      },
       deltakelser: { include: { spiller: true } },
       endringer: { orderBy: { tidspunkt: "desc" } },
     },
@@ -41,6 +170,25 @@ export default async function RundePage({
     }))
   );
 
+  // Oppsummering og plassbevegelse trenger hele serien: sesongtabellen
+  // beregnes med og uten denne runden.
+  const oppsummering = beregnRundeoppsummering(
+    runde.serie.runder.map((r) => ({
+      rundeId: r.id,
+      dato: r.dato,
+      rundenummer: r.rundenummer,
+      deltakelser: r.deltakelser.map((d) => ({
+        spillerId: d.spillerId,
+        spillerNavn: d.spiller.navn,
+        kamp1: d.kamp1,
+        kamp2: d.kamp2,
+        kamp3: d.kamp3,
+      })),
+    })),
+    runde.id,
+    runde.serie.antallTellendeRunder
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -52,6 +200,8 @@ export default async function RundePage({
         </h1>
       </div>
 
+      <Oppsummering o={oppsummering} />
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
           <thead>
@@ -62,8 +212,13 @@ export default async function RundePage({
               <th className="px-3 py-2 text-neutral-700">Kamp 2</th>
               <th className="px-3 py-2 text-neutral-700">Kamp 3</th>
               <th className="px-3 py-2 text-neutral-700">Seire</th>
-              <th className="px-3 py-2 text-neutral-700">Poengforskjell</th>
-              <th className="px-3 py-2 text-neutral-700"></th>
+              <th className="px-3 py-2 text-neutral-700">Poeng</th>
+              <th
+                className="px-3 py-2 text-neutral-700 text-center"
+                title="Endring i sesongtabellen etter denne runden"
+              >
+                Klatring
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -71,19 +226,19 @@ export default async function RundePage({
               <tr
                 key={r.spillerId}
                 className={`border-b border-neutral-100 last:border-0 ${
-                  r.plass === 1 ? "bg-rose-50" : i % 2 === 1 ? "bg-neutral-50" : ""
+                  r.plass === 1 ? "bg-amber-50" : i % 2 === 1 ? "bg-neutral-50" : ""
                 }`}
               >
                 <td className="px-3 py-2 font-semibold text-neutral-900">{r.plass}</td>
                 <td className="px-3 py-2 font-semibold text-neutral-900">{r.spillerNavn}</td>
                 <td className="px-3 py-2">
-                  <ScoreCell verdi={r.kamp1} kursiv={!r.erFullstendig} />
+                  <ScoreCell verdi={r.kamp1} />
                 </td>
                 <td className="px-3 py-2">
-                  <ScoreCell verdi={r.kamp2} kursiv={!r.erFullstendig} />
+                  <ScoreCell verdi={r.kamp2} />
                 </td>
                 <td className="px-3 py-2">
-                  <ScoreCell verdi={r.kamp3} kursiv={!r.erFullstendig} />
+                  <ScoreCell verdi={r.kamp3} />
                 </td>
                 <td
                   className={`px-3 py-2 font-medium text-neutral-900 ${
@@ -95,13 +250,19 @@ export default async function RundePage({
                 <td className="px-3 py-2">
                   <ScoreCell verdi={r.sumPoengforskjell} kursiv={!r.erFullstendig} />
                 </td>
-                <td className="px-3 py-2 text-xs text-neutral-500 italic">
-                  {!r.erFullstendig && "ufullstendig"}
+                <td className="px-3 py-2 text-center">
+                  <BevegelseCelle bevegelse={oppsummering.bevegelse.get(r.spillerId)} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {rangert.some((r) => !r.erFullstendig) && (
+          <p className="mt-2 text-xs text-neutral-700">
+            <span className="italic">Kursiv</span> seire og poeng: ufullstendig resultat – ikke
+            alle kampene ble spilt i runden.
+          </p>
+        )}
       </div>
 
       {runde.endringer.length > 0 && (

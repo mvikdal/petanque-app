@@ -60,12 +60,16 @@ export type SpillerIRunde = {
 export type RangertSpillerIRunde = SpillerIRunde &
   RundeResultat & { plass: number };
 
-// Rangering innad i én runde, spec §5.
+// Rangering innad i én runde, spec §5. Likt resultat gir delt plass, og
+// neste plass hoppes over (1, 1, 3 - avklart 2026-10-15).
 export function rangerRunde(deltakelser: SpillerIRunde[]): RangertSpillerIRunde[] {
-  return deltakelser
+  const sortert = deltakelser
     .map((d) => ({ ...d, ...beregnRundeResultat(d) }))
-    .sort(sammenlignRundeResultat)
-    .map((d, i) => ({ ...d, plass: i + 1 }));
+    .sort(sammenlignRundeResultat);
+  return sortert.map((d) => ({
+    ...d,
+    plass: 1 + sortert.filter((annen) => sammenlignRundeResultat(annen, d) < 0).length,
+  }));
 }
 
 export type SpillerSesongBlokk = {
@@ -139,6 +143,165 @@ export function beregnSesongtabell(
       }
       return b.blokkA.totaltPoeng - a.blokkA.totaltPoeng;
     });
+}
+
+export type RundeISerie = {
+  rundeId: string;
+  dato: Date;
+  rundenummer: number;
+  deltakelser: SpillerIRunde[];
+};
+
+export type PlassBevegelse = {
+  før: number | null; // null = spillerens første runde i serien
+  etter: number;
+};
+
+export type Pallplass = {
+  plass: number;
+  spillerNavn: string[]; // flere ved delt plass
+  resultat: RundeResultat;
+};
+
+export type Rundeoppsummering = {
+  antallDeltakere: number;
+  pall: Pallplass[]; // plass 1-3, med delte plasser
+  vinnere: { spillerNavn: string; resultat: RundeResultat }[];
+  serierekord: "ny" | "tangert" | null;
+  personligeRekorder: { spillerNavn: string; resultat: RundeResultat }[];
+  bevegelse: Map<string, PlassBevegelse>;
+  leder: { før: string | null; etter: string } | null;
+  ukensKlatrere: { spillerNavn: string; opp: number; plassEtter: number }[];
+  erFørsteRunde: boolean;
+};
+
+function sesongplasseringer(
+  runder: RundeISerie[],
+  antallTellendeRunder: number
+): SpillerSesongResultat[] {
+  const perSpiller = new Map<string, SpillerMedRunder>();
+  for (const runde of runder) {
+    for (const d of runde.deltakelser) {
+      const s = perSpiller.get(d.spillerId) ?? {
+        spillerId: d.spillerId,
+        spillerNavn: d.spillerNavn,
+        runder: [],
+      };
+      s.runder.push({ ...beregnRundeResultat(d), rundeId: runde.rundeId });
+      perSpiller.set(d.spillerId, s);
+    }
+  }
+  return beregnSesongtabell(Array.from(perSpiller.values()), antallTellendeRunder);
+}
+
+// Automatisk oppsummering av én runde (lagt til 2026-10-15): vinner(e),
+// 3-ere, rekorder, og hvordan runden endret sesongtabellen. Plassering er
+// indeks + 1 i sesongtabellen, akkurat som den vises på seriesiden.
+export function beregnRundeoppsummering(
+  alleRunder: RundeISerie[],
+  rundeId: string,
+  antallTellendeRunder: number
+): Rundeoppsummering {
+  const kronologisk = [...alleRunder].sort(
+    (a, b) => a.dato.getTime() - b.dato.getTime() || a.rundenummer - b.rundenummer
+  );
+  const indeks = kronologisk.findIndex((r) => r.rundeId === rundeId);
+  if (indeks === -1) throw new Error("Runden finnes ikke i serien");
+  const runde = kronologisk[indeks];
+  const tidligere = kronologisk.slice(0, indeks);
+
+  const resultater = runde.deltakelser.map((d) => ({
+    spillerId: d.spillerId,
+    spillerNavn: d.spillerNavn,
+    resultat: beregnRundeResultat(d),
+  }));
+
+  const vinnerIder = finnRundevinnere(resultater);
+  const vinnere = resultater
+    .filter((r) => vinnerIder.has(r.spillerId))
+    .map(({ spillerNavn, resultat }) => ({ spillerNavn, resultat }));
+
+  // Beste tidligere resultat - totalt og per spiller.
+  let tidligereSerierekord: RundeResultat | null = null;
+  const tidligereBestePerSpiller = new Map<string, RundeResultat>();
+  for (const r of tidligere) {
+    for (const d of r.deltakelser) {
+      const res = beregnRundeResultat(d);
+      if (!tidligereSerierekord || sammenlignRundeResultat(res, tidligereSerierekord) < 0) {
+        tidligereSerierekord = res;
+      }
+      const forrige = tidligereBestePerSpiller.get(d.spillerId);
+      if (!forrige || sammenlignRundeResultat(res, forrige) < 0) {
+        tidligereBestePerSpiller.set(d.spillerId, res);
+      }
+    }
+  }
+
+  let serierekord: Rundeoppsummering["serierekord"] = null;
+  if (vinnere.length > 0 && tidligereSerierekord) {
+    const sammenligning = sammenlignRundeResultat(vinnere[0].resultat, tidligereSerierekord);
+    serierekord = sammenligning < 0 ? "ny" : sammenligning === 0 ? "tangert" : null;
+  }
+
+  const personligeRekorder = resultater
+    .filter((r) => {
+      const forrige = tidligereBestePerSpiller.get(r.spillerId);
+      return forrige !== undefined && sammenlignRundeResultat(r.resultat, forrige) < 0;
+    })
+    .sort((a, b) => sammenlignRundeResultat(a.resultat, b.resultat))
+    .map(({ spillerNavn, resultat }) => ({ spillerNavn, resultat }));
+
+  const før = sesongplasseringer(tidligere, antallTellendeRunder);
+  const etter = sesongplasseringer(kronologisk.slice(0, indeks + 1), antallTellendeRunder);
+  const plassFør = new Map(før.map((s, i) => [s.spillerId, i + 1]));
+
+  const bevegelse = new Map<string, PlassBevegelse>();
+  etter.forEach((s, i) => {
+    bevegelse.set(s.spillerId, { før: plassFør.get(s.spillerId) ?? null, etter: i + 1 });
+  });
+
+  const erFørsteRunde = tidligere.length === 0;
+
+  const klatrere = erFørsteRunde
+    ? []
+    : etter
+        .map((s, i) => {
+          const fra = plassFør.get(s.spillerId);
+          return {
+            spillerNavn: s.spillerNavn,
+            opp: fra === undefined ? 0 : fra - (i + 1),
+            plassEtter: i + 1,
+          };
+        })
+        .filter((k) => k.opp > 0);
+  const størsteHopp = Math.max(0, ...klatrere.map((k) => k.opp));
+  const ukensKlatrere = klatrere.filter((k) => k.opp === størsteHopp);
+
+  const pall: Pallplass[] = [];
+  for (const r of rangerRunde(runde.deltakelser)) {
+    if (r.plass > 3) break;
+    const eksisterende = pall.find((p) => p.plass === r.plass);
+    if (eksisterende) {
+      eksisterende.spillerNavn.push(r.spillerNavn);
+    } else {
+      pall.push({ plass: r.plass, spillerNavn: [r.spillerNavn], resultat: r });
+    }
+  }
+
+  return {
+    antallDeltakere: runde.deltakelser.length,
+    pall,
+    vinnere,
+    serierekord,
+    personligeRekorder,
+    bevegelse,
+    leder:
+      etter.length > 0
+        ? { før: før[0]?.spillerNavn ?? null, etter: etter[0].spillerNavn }
+        : null,
+    ukensKlatrere,
+    erFørsteRunde,
+  };
 }
 
 // Gyldig poengforskjell-område følger seriens poengGrense (avklart 2026-09-14).
