@@ -22,6 +22,10 @@ function ScoreCell({ verdi, kursiv = false }: { verdi: number | null; kursiv?: b
   );
 }
 
+function kortDato(dato: Date) {
+  return new Date(dato).toLocaleDateString("no-NO", { day: "numeric", month: "numeric" });
+}
+
 function formatPoeng(p: number) {
   return p > 0 ? `+${p}` : String(p);
 }
@@ -189,6 +193,37 @@ export default async function RundePage({
     runde.serie.antallTellendeRunder
   );
 
+  // Forrige/neste runde i datorekkefølge (rundenummer følger datoen).
+  const kronologisk = [...runde.serie.runder].sort(
+    (a, b) => a.dato.getTime() - b.dato.getTime() || a.rundenummer - b.rundenummer
+  );
+  const indeks = kronologisk.findIndex((r) => r.id === runde.id);
+  const forrige = kronologisk[indeks - 1];
+  const neste = kronologisk[indeks + 1];
+
+  const navigasjon = (
+    <nav className="flex justify-between gap-4 text-sm" aria-label="Runder i serien">
+      {forrige ? (
+        <Link
+          href={`/serie/${serieId}/runde/${forrige.id}`}
+          className="text-indigo-700 font-medium hover:underline"
+        >
+          ← Runde {forrige.rundenummer} · {kortDato(forrige.dato)}
+        </Link>
+      ) : (
+        <span />
+      )}
+      {neste && (
+        <Link
+          href={`/serie/${serieId}/runde/${neste.id}`}
+          className="text-indigo-700 font-medium hover:underline text-right"
+        >
+          Runde {neste.rundenummer} · {kortDato(neste.dato)} →
+        </Link>
+      )}
+    </nav>
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -199,6 +234,8 @@ export default async function RundePage({
           Runde {runde.rundenummer} · {new Date(runde.dato).toLocaleDateString("no-NO")}
         </h1>
       </div>
+
+      {navigasjon}
 
       <Oppsummering o={oppsummering} />
 
@@ -264,6 +301,8 @@ export default async function RundePage({
           </p>
         )}
       </div>
+
+      {navigasjon}
 
       {runde.endringer.length > 0 && (
         <div className="text-sm text-neutral-700 border-t border-neutral-200 pt-4">
