@@ -61,7 +61,7 @@ export default function AdminGuidePage() {
           <li><strong>Admin → Klubber</strong> – opprett nye klubber.</li>
           <li><strong>Admin</strong> – opprett nye serier (velg klubb, poenggrense, antall tellende runder), og se oversikt over eksisterende serier. Med <strong>Rediger</strong> kan du endre navn, ukedager, antall tellende runder og status på en eksisterende serie. Poenggrensen kan ikke endres etterpå.</li>
           <li><strong>Ny runde</strong> – registrer resultatene for en spillekveld (se under).</li>
-          <li><strong>Runder</strong> – liste over alle runder i en serie, med lenke til å rette en allerede lagret runde.</li>
+          <li><strong>Runder</strong> – liste over alle runder i en serie, med lenke til å rette en allerede lagret runde. Rundenummeret følger alltid datoen: eldste runde er runde 1, og numrene oppdateres automatisk når en runde legges til eller får rettet dato. Hvis numrene i en eldre serie ikke følger datoene, vises knappen <strong>Sorter runder etter dato</strong> øverst på siden.</li>
         </ul>
       </Seksjon>
 

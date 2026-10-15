@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { sorterRunderEtterDato } from "../../../actions";
 
 export default async function AdminRunderPage({
   params,
@@ -19,6 +20,13 @@ export default async function AdminRunderPage({
   });
   if (!serie) notFound();
 
+  // Runder registrert før automatisk renummerering (2026-10-15) kan ha
+  // rundenummer i utakt med datoen.
+  const etterDato = [...serie.runder].sort(
+    (a, b) => a.dato.getTime() - b.dato.getTime() || a.rundenummer - b.rundenummer
+  );
+  const iUtakt = etterDato.some((r, i) => r.rundenummer !== i + 1);
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-neutral-900 mb-1">Runder – {serie.navn}</h1>
@@ -27,6 +35,22 @@ export default async function AdminRunderPage({
           + Ny runde
         </Link>
       </p>
+      {iUtakt && (
+        <form
+          action={sorterRunderEtterDato.bind(null, serie.id)}
+          className="mb-6 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-neutral-900 flex flex-wrap items-center justify-between gap-3"
+        >
+          <span>
+            Rundenumrene følger ikke datoene. Nummerer om slik at eldste runde blir runde 1?
+          </span>
+          <button
+            type="submit"
+            className="bg-indigo-700 text-white rounded px-4 py-2 text-sm font-semibold hover:bg-indigo-800"
+          >
+            Sorter runder etter dato
+          </button>
+        </form>
+      )}
       {serie.runder.length === 0 ? (
         <p className="text-sm text-neutral-700">Ingen runder registrert ennå.</p>
       ) : (

@@ -149,6 +149,44 @@ async function validerDeltakelser(
   }
 }
 
+// Rundenummer skal alltid følge datoen (avklart 2026-10-15): eldste runde
+// er runde 1. Ved samme dato beholdes den eksisterende innbyrdes rekkefølgen.
+// Gjøres i to steg via negative midlertidige numre, fordi (serieId,
+// rundenummer) er unik og to runder ellers kan kollidere underveis.
+async function renummererRunderEtterDato(serieId: string) {
+  const runder = await prisma.runde.findMany({
+    where: { serieId },
+    orderBy: [{ dato: "asc" }, { rundenummer: "asc" }],
+    select: { id: true, rundenummer: true },
+  });
+  const endres = runder
+    .map((r, i) => ({ id: r.id, fra: r.rundenummer, til: i + 1 }))
+    .filter((r) => r.fra !== r.til);
+  if (endres.length === 0) return;
+
+  await prisma.$transaction([
+    ...endres.map((r) =>
+      prisma.runde.update({ where: { id: r.id }, data: { rundenummer: -r.til } })
+    ),
+    ...endres.map((r) =>
+      prisma.runde.update({ where: { id: r.id }, data: { rundenummer: r.til } })
+    ),
+  ]);
+}
+
+// Engangsretting fra admin for serier der rundenummer og dato har kommet
+// i utakt (f.eks. Demo-serie og Lillekula, rettet 2026-10-15).
+export async function sorterRunderEtterDato(serieId: string) {
+  await assertAdmin();
+
+  await renummererRunderEtterDato(serieId);
+
+  revalidatePath(`/serie/${serieId}`);
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath(`/admin/serie/${serieId}/runder`);
+}
+
 export async function createRunde(
   serieId: string,
   dato: string,
@@ -181,6 +219,9 @@ export async function createRunde(
       },
     },
   });
+
+  // En runde kan registreres med en dato før tidligere runder.
+  await renummererRunderEtterDato(serieId);
 
   revalidatePath(`/serie/${serieId}`);
   revalidatePath("/");
@@ -241,6 +282,9 @@ export async function updateRunde(
       },
     }),
   ]);
+
+  // En rettet dato kan flytte runden i rekkefølgen.
+  await renummererRunderEtterDato(runde.serieId);
 
   revalidatePath(`/serie/${runde.serieId}`);
   revalidatePath(`/serie/${runde.serieId}/runde/${rundeId}`);
