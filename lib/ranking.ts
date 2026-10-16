@@ -83,6 +83,7 @@ export type SpillerSesongResultat = {
   spillerNavn: string;
   antallSpilteRunder: number;
   antallSpilteKamper: number;
+  antallRundeseiere: number; // runder vunnet (også delt seier), over alle spilte runder
   blokkA: SpillerSesongBlokk; // beste N runder - grunnlag for rangering
   blokkB: SpillerSesongBlokk; // alle spilte runder - kun til sammenligning
   besteRunde: RundeResultatMedId; // personlig rekord i serien
@@ -105,7 +106,8 @@ function beregnBlokk(runder: RundeResultat[]): SpillerSesongBlokk {
   };
 }
 
-export type RundeResultatMedId = RundeResultat & { rundeId: string };
+// vant: spilleren vant runden (eller delte seieren), se finnRundevinnere.
+export type RundeResultatMedId = RundeResultat & { rundeId: string; vant: boolean };
 
 export type SpillerMedRunder = {
   spillerId: string;
@@ -113,7 +115,8 @@ export type SpillerMedRunder = {
   runder: RundeResultatMedId[]; // én per fullført runde spilleren deltok i
 };
 
-// Sesongtabell, spec §6: rangert på blokk A (beste N runder), blokk B kun informativ.
+// Sesongtabell, spec §6: rangert på antall rundeseiere, deretter totalt poeng
+// i blokk A (beste N runder) - avklart 2026-10-16. Blokk B kun informativ.
 export function beregnSesongtabell(
   spillere: SpillerMedRunder[],
   antallTellendeRunder: number
@@ -127,6 +130,7 @@ export function beregnSesongtabell(
         spillerNavn: s.spillerNavn,
         antallSpilteRunder: s.runder.length,
         antallSpilteKamper: s.runder.reduce((sum, r) => sum + r.antallKamper, 0),
+        antallRundeseiere: s.runder.filter((r) => r.vant).length,
         blokkA: beregnBlokk(besteN),
         blokkB: beregnBlokk(sortert),
         besteRunde: sortert[0],
@@ -138,8 +142,8 @@ export function beregnSesongtabell(
       };
     })
     .sort((a, b) => {
-      if (b.blokkA.snittSeire !== a.blokkA.snittSeire) {
-        return b.blokkA.snittSeire - a.blokkA.snittSeire;
+      if (b.antallRundeseiere !== a.antallRundeseiere) {
+        return b.antallRundeseiere - a.antallRundeseiere;
       }
       return b.blokkA.totaltPoeng - a.blokkA.totaltPoeng;
     });
@@ -181,13 +185,20 @@ function sesongplasseringer(
 ): SpillerSesongResultat[] {
   const perSpiller = new Map<string, SpillerMedRunder>();
   for (const runde of runder) {
+    const vinnere = finnRundevinnere(
+      runde.deltakelser.map((d) => ({ spillerId: d.spillerId, resultat: beregnRundeResultat(d) }))
+    );
     for (const d of runde.deltakelser) {
       const s = perSpiller.get(d.spillerId) ?? {
         spillerId: d.spillerId,
         spillerNavn: d.spillerNavn,
         runder: [],
       };
-      s.runder.push({ ...beregnRundeResultat(d), rundeId: runde.rundeId });
+      s.runder.push({
+        ...beregnRundeResultat(d),
+        rundeId: runde.rundeId,
+        vant: vinnere.has(d.spillerId),
+      });
       perSpiller.set(d.spillerId, s);
     }
   }

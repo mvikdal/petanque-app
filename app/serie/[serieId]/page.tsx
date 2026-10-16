@@ -48,13 +48,20 @@ export default async function SeriePage({
 
   const perSpiller = new Map<string, SpillerMedRunder>();
   for (const runde of serie.runder) {
+    const vinnere = finnRundevinnere(
+      runde.deltakelser.map((d) => ({ spillerId: d.spillerId, resultat: beregnRundeResultat(d) }))
+    );
     for (const d of runde.deltakelser) {
       const eksisterende = perSpiller.get(d.spillerId) ?? {
         spillerId: d.spillerId,
         spillerNavn: d.spiller.navn,
         runder: [],
       };
-      eksisterende.runder.push({ ...beregnRundeResultat(d), rundeId: runde.id });
+      eksisterende.runder.push({
+        ...beregnRundeResultat(d),
+        rundeId: runde.id,
+        vant: vinnere.has(d.spillerId),
+      });
       perSpiller.set(d.spillerId, eksisterende);
     }
   }
@@ -136,17 +143,15 @@ export default async function SeriePage({
     }
   }
 
-  // Statistikk til sesongtabellen, telt fra matrisen slik at «seier»
-  // betyr nøyaktig det samme som den sterke grønnfargen i totaltabellen.
-  const statistikk = new Map<string, { seiere: number; treere: number }>();
+  // Antall 3-ere til sesongtabellen, telt fra matrisen. Rundeseiere
+  // kommer fra sesongtabellen selv, siden de styrer rangeringen.
+  const treere = new Map<string, number>();
   for (const [spillerId, celler] of matrise) {
-    let seiere = 0;
-    let treere = 0;
+    let antall = 0;
     for (const celle of celler.values()) {
-      if (celle.vant) seiere++;
-      if (celle.treer) treere++;
+      if (celle.treer) antall++;
     }
-    statistikk.set(spillerId, { seiere, treere });
+    treere.set(spillerId, antall);
   }
 
   const sesongPerSpiller = new Map(sesongtabell.map((s) => [s.spillerId, s]));
@@ -312,8 +317,8 @@ export default async function SeriePage({
                       <td className="px-3 py-2 bg-green-50 text-center text-neutral-900">
                         {s.antallSpilteKamper}
                       </td>
-                      <StatistikkTall verdi={statistikk.get(s.spillerId)?.seiere ?? 0} />
-                      <StatistikkTall verdi={statistikk.get(s.spillerId)?.treere ?? 0} />
+                      <StatistikkTall verdi={s.antallRundeseiere} />
+                      <StatistikkTall verdi={treere.get(s.spillerId) ?? 0} />
                       <td
                         className={`px-3 py-2 bg-green-50 text-center whitespace-nowrap ${
                           s.besteRunde.erFullstendig ? "" : "italic"

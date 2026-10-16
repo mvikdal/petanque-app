@@ -89,7 +89,7 @@ Spillere med færre enn N spilte runder får identiske tall i begge bolker (side
 **Avklart:** Siden poengforskjell nå er signert (positiv ved seier, negativ ved tap – se datamodell), vil "totalt poeng" naturlig reflektere både seiersmargin og tapsmargin uten behov for egen logikk rundt tapte kamper.
 
 4. Det er **ikke** noe minstekrav til antall spilte runder – alle spillere med minst én fullført runde vises i sesongtabellen.
-5. Sesongtabellen **rangeres på bolk A** (beste N runder): sortert på snitt seire, med totalt poeng som tiebreak. Bolk B vises kun til informasjon.
+5. Sesongtabellen **rangeres på antall rundeseiere** (runder spilleren vant, også delt seier – 🏆 i tabellen), med totalt poeng i bolk A (beste N runder) som tiebreak (avklart 2026-10-16). Bolk B vises kun til informasjon.
 
 ## 7. Grensesnitt mot eksisterende system
 
