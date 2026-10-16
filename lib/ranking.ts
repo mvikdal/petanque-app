@@ -83,14 +83,16 @@ export type SpillerSesongResultat = {
   spillerNavn: string;
   antallSpilteRunder: number;
   antallSpilteKamper: number;
+  antallKampseire: number; // enkeltseire (vunne kamper) over alle spilte runder
   antallRundeseiere: number; // runder vunnet (også delt seier), over alle spilte runder
   blokkA: SpillerSesongBlokk; // beste N runder - grunnlag for rangering
   blokkB: SpillerSesongBlokk; // alle spilte runder - kun til sammenligning
   besteRunde: RundeResultatMedId; // personlig rekord i serien
   tellendeRundeIder: string[]; // rundene i blokk A - resten er strøket
   // Den svakeste tellende runden - den en ny runde må slå for å forbedre
-  // snittet. Kun satt når spilleren har spilt minst N runder.
-  svakesteTellendeRundeId: string | null;
+  // snittet, og som strykes neste gang. Kun satt når spilleren har spilt
+  // minst N runder.
+  svakesteTellendeRunde: RundeResultatMedId | null;
 };
 
 function beregnBlokk(runder: RundeResultat[]): SpillerSesongBlokk {
@@ -130,14 +132,15 @@ export function beregnSesongtabell(
         spillerNavn: s.spillerNavn,
         antallSpilteRunder: s.runder.length,
         antallSpilteKamper: s.runder.reduce((sum, r) => sum + r.antallKamper, 0),
+        antallKampseire: s.runder.reduce((sum, r) => sum + r.sumSeire, 0),
         antallRundeseiere: s.runder.filter((r) => r.vant).length,
         blokkA: beregnBlokk(besteN),
         blokkB: beregnBlokk(sortert),
         besteRunde: sortert[0],
         tellendeRundeIder: besteN.map((r) => r.rundeId),
-        svakesteTellendeRundeId:
+        svakesteTellendeRunde:
           s.runder.length >= antallTellendeRunder && besteN.length > 0
-            ? besteN[besteN.length - 1].rundeId
+            ? besteN[besteN.length - 1]
             : null,
       };
     })

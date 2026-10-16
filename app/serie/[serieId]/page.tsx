@@ -231,7 +231,7 @@ export default async function SeriePage({
                     </th>
                     <th
                       className="px-3 py-2 bg-green-100 text-green-900 font-semibold text-center border-b border-green-200"
-                      colSpan={5}
+                      colSpan={7}
                     >
                       Statistikk
                     </th>
@@ -263,6 +263,12 @@ export default async function SeriePage({
                     </th>
                     <th
                       className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Enkeltseire – totalt antall vunne kamper"
+                    >
+                      ✅
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
                       title="Rundeseiere – antall runder med beste resultat"
                     >
                       🏆
@@ -278,6 +284,12 @@ export default async function SeriePage({
                       title="Beste runde – klikk for å åpne runden"
                     >
                       ⭐
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Neste strykbare runde – den svakeste tellende runden, som strykes når en bedre runde kommer"
+                    >
+                      ✂️
                     </th>
                   </tr>
                 </thead>
@@ -317,6 +329,7 @@ export default async function SeriePage({
                       <td className="px-3 py-2 bg-green-50 text-center text-neutral-900">
                         {s.antallSpilteKamper}
                       </td>
+                      <StatistikkTall verdi={s.antallKampseire} />
                       <StatistikkTall verdi={s.antallRundeseiere} />
                       <StatistikkTall verdi={treere.get(s.spillerId) ?? 0} />
                       <td
@@ -331,6 +344,24 @@ export default async function SeriePage({
                           {s.besteRunde.sumSeire} {formatPoeng(s.besteRunde.sumPoengforskjell)}
                         </Link>
                       </td>
+                      {s.svakesteTellendeRunde ? (
+                        <td
+                          className={`px-3 py-2 bg-green-50 text-center whitespace-nowrap ${
+                            s.svakesteTellendeRunde.erFullstendig ? "" : "italic"
+                          }`}
+                        >
+                          <Link
+                            href={`/serie/${serie.id}/runde/${s.svakesteTellendeRunde.rundeId}`}
+                            className="text-red-900 underline decoration-red-300 underline-offset-2 hover:decoration-red-700"
+                          >
+                            {s.svakesteTellendeRunde.sumSeire}{" "}
+                            {formatPoeng(s.svakesteTellendeRunde.sumPoengforskjell)}
+                          </Link>
+                        </td>
+                      ) : (
+                        // Ingenting strykes før spilleren har spilt N runder.
+                        <td className="px-3 py-2 bg-green-50 text-center text-neutral-400">–</td>
+                      )}
                     </tr>
                     );
                   })}
@@ -339,9 +370,11 @@ export default async function SeriePage({
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-700">
                 <span>📅 Runder spilt</span>
                 <span>🎯 Kamper spilt</span>
+                <span>✅ Enkeltseire</span>
                 <span>🏆 Rundeseier</span>
                 <span>3-ere: runder med 3 seire</span>
                 <span>⭐ Beste runde</span>
+                <span>✂️ Neste strykbare runde</span>
               </div>
             </div>
           )
@@ -390,7 +423,7 @@ export default async function SeriePage({
                         const celle = matrise.get(s.spillerId)?.get(runde.id);
                         const erStroket =
                           celle !== undefined && !sesong?.tellendeRundeIder.includes(runde.id);
-                        const svakeste = sesong?.svakesteTellendeRundeId === runde.id;
+                        const svakeste = sesong?.svakesteTellendeRunde?.rundeId === runde.id;
                         // Prioritet: svakeste tellende → vant → 3-er → radbakgrunn.
                         // Strøkne runder gjennomstrekes og dempes.
                         const farge = svakeste
