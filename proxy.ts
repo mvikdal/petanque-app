@@ -1,42 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { erGyldigAdminAuth } from "@/lib/admin-auth";
+import { lesSesjonstoken, SESJONSCOOKIE } from "@/lib/auth/sesjon";
 
-// Enkel HTTP Basic Auth for admin-området. Krever ADMIN_PASSWORD satt som
-// miljøvariabel - er den ikke satt (f.eks. lokal utvikling), står /admin
-// åpent som før. Sett ADMIN_PASSWORD (og evt. ADMIN_USER) i Vercel før
-// dette publiseres på nett.
+// Port foran admin-områdene (klubbskillet, 2026-10-18). Kun admin krever
+// innlogging - klubbenes offentlige sider er åpne.
 //
-// "middleware.ts" er deprecated fra Next.js v16 til fordel for "proxy.ts"
-// (se node_modules/next/dist/docs/.../proxy.md) - dette er den gjeldende
-// konvensjonen for denne versjonen. Selve autorisasjonssjekken er likevel
-// IKKE den eneste sperren: hver admin server action verifiserer også
-// uavhengig (lib/admin-auth.ts#assertAdmin), slik Next.js selv anbefaler.
+// /[klubb]/admin krever en sesjon for akkurat den klubben. Er man ikke
+// innlogget, eller innlogget i en annen klubb, sendes man til klubbens
+// innloggingsside. Dette er bare første sperre: admin-sidene og hver
+// server action sjekker også selv på serveren (lib/klubb-admin.ts), slik
+// Next.js anbefaler.
+//
+// "middleware.ts" heter "proxy.ts" fra Next.js v16, se
+// node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md
 export function proxy(request: NextRequest) {
-  if (erGyldigAdminAuth(request.headers.get("authorization"))) {
-    return NextResponse.next();
+  const { pathname, search } = request.nextUrl;
+  const sesjon = lesSesjonstoken(request.cookies.get(SESJONSCOOKIE)?.value);
+
+  // /superadmin krever en gyldig sesjon. Om brukeren faktisk er superadmin,
+  // sjekkes mot databasen på serveren (lib/superadmin.ts).
+  if (pathname === "/superadmin" || pathname.startsWith("/superadmin/")) {
+    if (pathname === "/superadmin/login" || sesjon) return NextResponse.next();
+    return NextResponse.redirect(new URL("/superadmin/login", request.url));
   }
 
-  // Next.js prefetcher lenker (som "Admin"-lenken i header på alle
-  // offentlige sider) i bakgrunnen. En 401 med WWW-Authenticate på en slik
-  // bakgrunnsforespørsel får nettleseren til å vise innloggingsboksen oppå
-  // SIDEN BRUKEREN FAKTISK ER PÅ, selv om de aldri navigerte til /admin.
-  // Prefetch er nå skrudd av på selve lenken også (se app/layout.tsx), men
-  // vi utelater uansett WWW-Authenticate-headeren for slike forespørsler
-  // som et ekstra lag - innholdet blokkeres fortsatt (401), bare uten å
-  // trigge nettleserens native dialog.
-  const erPrefetch =
-    request.headers.get("next-router-prefetch") === "1" ||
-    request.headers.get("purpose") === "prefetch" ||
-    request.headers.get("sec-purpose")?.includes("prefetch");
+  const [, klubbSlug, admin, underside] = pathname.split("/");
+  if (admin !== "admin" || underside === "login") return NextResponse.next();
 
-  return new NextResponse("Autentisering nødvendig", {
-    status: 401,
-    headers: erPrefetch
-      ? {}
-      : { "WWW-Authenticate": 'Basic realm="Admin"' },
-  });
+  if (sesjon?.klubb?.slug === klubbSlug) return NextResponse.next();
+
+  const login = new URL(`/${klubbSlug}/admin/login`, request.url);
+  login.searchParams.set("neste", pathname + search);
+  return NextResponse.redirect(login);
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/:klubb/admin/:path*", "/superadmin/:path*"],
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createRunde, createSpiller, updateRunde } from "@/app/admin/actions";
+import { createRunde, createSpiller, updateRunde } from "@/app/[klubb]/admin/actions";
 
 type Spiller = { id: string; navn: string };
 
@@ -11,12 +11,14 @@ export function RundeForm(
   props:
     | {
         mode: "ny";
+        klubbSlug: string;
         serieId: string;
         poengGrense: number;
         spillere: Spiller[];
       }
     | {
         mode: "rediger";
+        klubbSlug: string;
         serieId: string;
         rundeId: string;
         poengGrense: number;
@@ -30,7 +32,7 @@ export function RundeForm(
         }[];
       }
 ) {
-  const { mode, serieId, poengGrense, spillere: initialSpillere } = props;
+  const { mode, klubbSlug, serieId, poengGrense, spillere: initialSpillere } = props;
 
   const [spillere, setSpillere] = useState(initialSpillere);
   const [valgte, setValgte] = useState<Set<string>>(
@@ -81,7 +83,7 @@ export function RundeForm(
     if (!nyttNavn.trim()) return;
     setFeilmelding(null);
     try {
-      const spiller = await createSpiller(serieId, nyttNavn);
+      const spiller = await createSpiller(klubbSlug, serieId, nyttNavn);
       setSpillere((prev) =>
         [...prev, spiller].sort((a, b) => a.navn.localeCompare(b.navn))
       );
@@ -135,9 +137,9 @@ export function RundeForm(
     startTransition(async () => {
       try {
         if (mode === "ny") {
-          await createRunde(serieId, dato, deltakelser);
+          await createRunde(klubbSlug, serieId, dato, deltakelser);
         } else {
-          await updateRunde(props.rundeId, dato, deltakelser, kommentar);
+          await updateRunde(klubbSlug, props.rundeId, dato, deltakelser, kommentar);
         }
       } catch (e) {
         setFeilmelding(e instanceof Error ? e.message : "Kunne ikke lagre runden.");

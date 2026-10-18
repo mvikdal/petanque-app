@@ -2,9 +2,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Appen bruker DATABASE_URL (Neons pooler). Migreringer (prisma migrate,
+// også i build) går over den direkte forbindelsen, siden pooleren ikke
+// støtter alt migrate trenger. Begge settes av Neon-integrasjonen i Vercel.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // Spillerregisteret er separat per serie (avklart 2026-09-14) - samme
@@ -20,14 +24,42 @@ model Spiller {
   @@unique([serieId, navn])
 }
 
-// Toppnivå-inndeling over serier (lagt til 2026-10-13). Admin for klubber
-// er en egen seksjon (/admin/klubber), separat fra den vanlige
-// serie/runde-administrasjonen, men låst med samme admin-passord.
+// Klubbene er helt adskilt fra hverandre (klubbskille, 2026-10-18): egen
+// offentlig side på /[slug], egen admin og egne data. Kun Serie har
+// klubbId - Spiller, Runde, Deltakelse og RundeEndring nås alltid via
+// serien, så klubbfilteret går gjennom den (se lib/data/).
 model Klubb {
-  id        String   @id @default(cuid())
-  navn      String   @unique
-  opprettet DateTime @default(now())
+  id        String       @id @default(cuid())
+  navn      String       @unique
+  slug      String       @unique
+  opprettet DateTime     @default(now())
   serier    Serie[]
+  admins    KlubbAdmin[]
+}
+
+// Innlogging (2026-10-18). Superadmin oppretter klubber og klubbadmins
+// på /superadmin, og kan i tillegg logge inn i hvilken som helst klubb.
+model AdminBruker {
+  id           String       @id @default(cuid())
+  epost        String       @unique
+  passordHash  String
+  erSuperadmin Boolean      @default(false)
+  opprettet    DateTime     @default(now())
+  klubber      KlubbAdmin[]
+}
+
+// rolle: "admin" | "demo". Demo-admin kan redigere data, men ikke bytte
+// passord eller opprette brukere.
+model KlubbAdmin {
+  brukerId  String
+  bruker    AdminBruker @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+  klubbId   String
+  klubb     Klubb       @relation(fields: [klubbId], references: [id], onDelete: Cascade)
+  rolle     String      @default("admin")
+  opprettet DateTime    @default(now())
+
+  @@id([brukerId, klubbId])
+  @@index([klubbId])
 }
 
 model Serie {
@@ -44,6 +76,8 @@ model Serie {
   klubb                Klubb    @relation(fields: [klubbId], references: [id], onDelete: Cascade)
   runder               Runde[]
   spillere             Spiller[]
+
+  @@unique([klubbId, navn])
 }
 
 model Runde {
