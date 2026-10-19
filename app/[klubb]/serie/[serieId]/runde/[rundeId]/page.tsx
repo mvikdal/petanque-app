@@ -264,12 +264,14 @@ export default async function RundePage({
               <th className="px-3 py-2 text-neutral-700" title="Seire">
                 🏆
               </th>
-              <th className="px-3 py-2 text-neutral-700">Poeng</th>
+              <th className="px-3 py-2 text-neutral-700" title="Poengforskjell">
+                ±
+              </th>
               <th
                 className="px-3 py-2 text-neutral-700 text-center"
                 title="Endring i sesongtabellen etter denne runden"
               >
-                Klatring
+                ↕
               </th>
             </tr>
           </thead>
