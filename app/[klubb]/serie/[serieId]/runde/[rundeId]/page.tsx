@@ -193,24 +193,33 @@ export default async function RundePage({
   const forrige = kronologisk[indeks - 1];
   const neste = kronologisk[indeks + 1];
 
+  const knapp =
+    "flex items-center gap-3 bg-white border border-neutral-300 rounded-lg px-4 py-2 shadow-sm hover:border-indigo-600 hover:bg-indigo-50 transition-colors";
+
   const navigasjon = (
-    <nav className="flex justify-between gap-4 text-sm" aria-label="Runder i serien">
+    <nav className="flex justify-between gap-3" aria-label="Runder i serien">
       {forrige ? (
-        <Link
-          href={rundeUrl(klubb.slug, serieId, forrige.id)}
-          className="text-indigo-700 font-medium hover:underline"
-        >
-          ← Runde {forrige.rundenummer} · {kortDato(forrige.dato)}
+        <Link href={rundeUrl(klubb.slug, serieId, forrige.id)} className={knapp}>
+          <span className="text-lg text-indigo-700" aria-hidden>←</span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-xs text-neutral-500">Forrige runde</span>
+            <span className="text-sm font-semibold text-neutral-900">
+              Runde {forrige.rundenummer} · {kortDato(forrige.dato)}
+            </span>
+          </span>
         </Link>
       ) : (
         <span />
       )}
       {neste && (
-        <Link
-          href={rundeUrl(klubb.slug, serieId, neste.id)}
-          className="text-indigo-700 font-medium hover:underline text-right"
-        >
-          Runde {neste.rundenummer} · {kortDato(neste.dato)} →
+        <Link href={rundeUrl(klubb.slug, serieId, neste.id)} className={`${knapp} text-right`}>
+          <span className="flex flex-col leading-tight">
+            <span className="text-xs text-neutral-500">Neste runde</span>
+            <span className="text-sm font-semibold text-neutral-900">
+              Runde {neste.rundenummer} · {kortDato(neste.dato)}
+            </span>
+          </span>
+          <span className="text-lg text-indigo-700" aria-hidden>→</span>
         </Link>
       )}
     </nav>
@@ -219,10 +228,14 @@ export default async function RundePage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href={serieUrl(klubb.slug, serieId)} className="text-sm text-indigo-700 font-medium hover:underline">
-          ← {runde.serie.navn}
+        <Link
+          href={serieUrl(klubb.slug, serieId)}
+          className="inline-flex items-center gap-2 bg-indigo-700 text-white rounded-lg px-4 py-2 text-sm font-semibold shadow-sm hover:bg-indigo-800 transition-colors"
+        >
+          <span aria-hidden>←</span>
+          {runde.serie.navn} – Tabell
         </Link>
-        <h1 className="text-2xl font-bold text-neutral-900 mt-1">
+        <h1 className="text-2xl font-bold text-neutral-900 mt-3">
           Runde {runde.rundenummer} · {new Date(runde.dato).toLocaleDateString("no-NO")}
         </h1>
       </div>
