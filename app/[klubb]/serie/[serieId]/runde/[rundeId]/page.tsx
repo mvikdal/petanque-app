@@ -248,12 +248,22 @@ export default async function RundePage({
         <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
           <thead>
             <tr className="border-b border-neutral-200 text-left">
-              <th className="px-3 py-2 text-neutral-700">Plass</th>
+              <th className="px-3 py-2 text-neutral-700" title="Plass">
+                #
+              </th>
               <th className="px-3 py-2 text-neutral-700">Spiller</th>
-              <th className="px-3 py-2 text-neutral-700">Kamp 1</th>
-              <th className="px-3 py-2 text-neutral-700">Kamp 2</th>
-              <th className="px-3 py-2 text-neutral-700">Kamp 3</th>
-              <th className="px-3 py-2 text-neutral-700">Seire</th>
+              <th className="px-3 py-2 text-neutral-700" title="Kamp 1">
+                K1
+              </th>
+              <th className="px-3 py-2 text-neutral-700" title="Kamp 2">
+                K2
+              </th>
+              <th className="px-3 py-2 text-neutral-700" title="Kamp 3">
+                K3
+              </th>
+              <th className="px-3 py-2 text-neutral-700" title="Seire">
+                🏆
+              </th>
               <th className="px-3 py-2 text-neutral-700">Poeng</th>
               <th
                 className="px-3 py-2 text-neutral-700 text-center"
