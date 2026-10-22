@@ -1,4 +1,4 @@
-import { krevKlubbAdminSide } from "@/lib/klubb-admin";
+import { harBildetolkning, krevKlubbAdminSide } from "@/lib/klubb-admin";
 import { hentSerie, listSpillere } from "@/lib/data/serier";
 import { notFound } from "next/navigation";
 import { RundeForm } from "@/components/admin/RundeForm";
@@ -26,6 +26,7 @@ export default async function NyRundePage({
         klubbSlug={klubb.slug}
         serieId={serie.id}
         poengGrense={serie.poengGrense}
+        bildetolkning={harBildetolkning(klubb)}
         spillere={spillere}
       />
     </div>

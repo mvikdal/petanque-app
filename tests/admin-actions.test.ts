@@ -4,6 +4,7 @@ import {
   createSerie,
   createSpiller,
   sorterRunderEtterDato,
+  tolkResultatark,
   updateRunde,
   updateSerie,
 } from "@/app/[klubb]/admin/actions";
@@ -51,6 +52,7 @@ const angrepPåB = (): [string, () => Promise<unknown>][] => [
   ["sorterRunderEtterDato", () => sorterRunderEtterDato(t.b.slug, t.b.serieId)],
   ["createRunde", () => createRunde(t.b.slug, t.b.serieId, "2026-03-01", deltakelse())],
   ["updateRunde", () => updateRunde(t.b.slug, t.b.rundeId, "2026-03-01", deltakelse(), "")],
+  ["tolkResultatark", () => tolkResultatark(t.b.slug, t.b.serieId, new FormData())],
 ];
 
 describe("admin-actions mot en annen klubb avvises", () => {
@@ -89,6 +91,9 @@ describe("admin-actions mot en annen klubb avvises", () => {
     await expect(
       updateRunde(t.a.slug, t.b.rundeId, "2026-03-01", deltakelse(), "")
     ).rejects.toThrow(/finnes ikke/);
+    await expect(tolkResultatark(t.a.slug, t.b.serieId, new FormData())).rejects.toThrow(
+      /finnes ikke/
+    );
     expect(await tilstand(t.b.id)).toEqual(før);
   });
 
@@ -119,6 +124,27 @@ describe("admin i egen klubb (kontroll)", () => {
       ])
     );
     expect(mål).toMatch(new RegExp(`^/${t.b.slug}/serie/${t.b.serieId}/runde/`));
+  });
+
+  it("tolkResultatark avviser manglende fil og feil filtype før modellen kalles", async () => {
+    loggInnSom(t.adminB.id, t.b);
+    await expect(tolkResultatark(t.b.slug, t.b.serieId, new FormData())).resolves.toEqual({
+      feil: expect.stringMatching(/Velg et bilde/),
+    });
+    const skjema = new FormData();
+    skjema.set("fil", new File(["hei"], "ark.txt", { type: "text/plain" }));
+    await expect(tolkResultatark(t.b.slug, t.b.serieId, skjema)).resolves.toEqual({
+      feil: expect.stringMatching(/Filtypen/),
+    });
+  });
+
+  it("tolkResultatark er stengt for demo-admin (koster penger per kall)", async () => {
+    loggInnSom(t.demoA.id, t.a);
+    const skjema = new FormData();
+    skjema.set("fil", new File(["x"], "ark.jpg", { type: "image/jpeg" }));
+    await expect(tolkResultatark(t.a.slug, t.a.serieId, skjema)).resolves.toEqual({
+      feil: expect.stringMatching(/ikke tilgjengelig i demo/),
+    });
   });
 
   it("superadmin som har logget inn i klubben, har tilgang", async () => {

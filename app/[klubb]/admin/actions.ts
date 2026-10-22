@@ -1,8 +1,17 @@
 "use server";
 
-import { krevKlubbAdmin } from "@/lib/klubb-admin";
+import { harBildetolkning, krevKlubbAdmin } from "@/lib/klubb-admin";
 import * as data from "@/lib/data/serier";
 import type { NyDeltakelseInput } from "@/lib/data/serier";
+import { matchSpillere } from "@/lib/navnematch";
+import {
+  kamperFraRad,
+  kontrollerRad,
+  lesResultatark,
+  tolkDato,
+  type TolketArk,
+  type TolketRad,
+} from "@/lib/resultatark";
 import {
   adminRunderUrl,
   adminUrl,
@@ -131,4 +140,61 @@ export async function updateRunde(
   revalidatePath(rundeUrl(klubb.slug, runde.serieId, rundeId));
   revalidatePath(adminRunderUrl(klubb.slug, runde.serieId));
   redirect(rundeUrl(klubb.slug, runde.serieId, rundeId));
+}
+
+const ARKTYPER = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
+const MAKS_ARKSTØRRELSE = 4 * 1024 * 1024;
+
+// Leser et bilde eller en PDF av resultatarket og foreslår utfylling av
+// rundeskjemaet. Lagrer ingenting - admin kontrollerer og lagrer selv.
+// Feil i selve tolkningen returneres som { feil }, siden Next skjuler
+// meldingen i feil som kastes fra server actions i produksjon.
+export async function tolkResultatark(
+  klubbSlug: string,
+  serieId: string,
+  formData: FormData
+): Promise<TolketArk | { feil: string }> {
+  const klubb = await krevKlubbAdmin(klubbSlug);
+  const serie = await data.hentSerie(klubb.id, serieId);
+  if (!serie) throw new Error("Serien finnes ikke i denne klubben.");
+  if (!harBildetolkning(klubb)) return { feil: "Innlesing fra bilde er ikke tilgjengelig i demo." };
+
+  const fil = formData.get("fil");
+  if (!(fil instanceof File) || fil.size === 0) return { feil: "Velg et bilde eller en PDF." };
+  if (!ARKTYPER.includes(fil.type)) {
+    return { feil: "Filtypen støttes ikke. Bruk JPG, PNG, WEBP, HEIC eller PDF." };
+  }
+  if (fil.size > MAKS_ARKSTØRRELSE) return { feil: "Filen er for stor (maks 4 MB)." };
+
+  const spillere = await data.listSpillere(klubb.id, serieId);
+  let ark;
+  try {
+    ark = await lesResultatark({
+      fil: new Uint8Array(await fil.arrayBuffer()),
+      mediaType: fil.type,
+      spillernavn: spillere.map((s) => s.navn),
+      poengGrense: serie.poengGrense,
+    });
+  } catch (e) {
+    console.error("Tolking av resultatark feilet", e);
+    return { feil: "Klarte ikke å tolke arket. Prøv et skarpere bilde, eller fyll ut for hånd." };
+  }
+
+  const treff = matchSpillere(
+    ark.rader.map((r) => r.navnPaaArk),
+    spillere
+  );
+  return {
+    dato: tolkDato(ark.datoTekst, serie.sesongStart, serie.sesongSlutt),
+    datoTekst: ark.datoTekst,
+    merknad: ark.merknad,
+    rader: ark.rader.map((rad, i) => ({
+      navnPaaArk: rad.navnPaaArk,
+      spillerId: treff[i].spillerId,
+      sikkerhet: treff[i].sikkerhet,
+      kamper: kamperFraRad(rad).map((k) => k.forskjell) as TolketRad["kamper"],
+      usikkert: rad.usikkert,
+      advarsler: kontrollerRad(rad, serie.poengGrense),
+    })),
+  };
 }

@@ -36,3 +36,10 @@ export async function krevKlubbAdminSide(slug: string): Promise<KlubbKontekst> {
   if (!kontekst) redirect(`/${slug}/admin/login`);
   return kontekst;
 }
+
+// Bildetolkning av resultatark koster penger per kall (Anthropic API), så
+// den er stengt i demo-klubben og for demo-admins - demo-innloggingen er
+// åpen for alle.
+export function harBildetolkning(kontekst: KlubbKontekst) {
+  return kontekst.slug !== "demo" && kontekst.rolle !== "demo";
+}

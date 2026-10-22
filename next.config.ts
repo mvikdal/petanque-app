@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Bilder og PDF av resultatark sendes til en server action (maks 4 MB,
+  // se tolkResultatark). Standardgrensen er 1 MB.
+  experimental: {
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   // Admin lå på /admin før klubbskillet (2026-10-18). Alt som fantes da
   // hørte til Sinsen. Gamle /serie/...-lenker sendes videre i
   // app/serie/, siden de må slå opp riktig klubb.

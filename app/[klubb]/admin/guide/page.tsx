@@ -85,6 +85,24 @@ export default async function AdminGuidePage({ params }: PageProps<"/[klubb]/adm
         </ol>
       </Seksjon>
 
+      <Seksjon tittel="Les inn resultatarket fra bilde">
+        <p>
+          Øverst på <strong>Ny runde</strong> kan du trykke <strong>Ta bilde</strong> (åpner
+          kameraet på mobil) eller <strong>Importer fil</strong> (bilde eller PDF du har fått
+          tilsendt). Både håndskrevne og maskinskrevne ark kan leses.
+        </p>
+        <p>
+          Arket tolkes automatisk, og skjemaet fylles ut med dato, spillere og poeng. Ingenting
+          lagres før du selv trykker <strong>Lagre runde</strong>, så sjekk tallene mot arket
+          først. Rader som er gule, bør du se ekstra nøye på: navnet var uklart, tallene var
+          vanskelige å lese, eller de stemmer ikke med totalen på arket.
+        </p>
+        <p>
+          Navn som ikke ble gjenkjent, listes for seg. Velg riktig spiller i listen, eller
+          trykk <strong>Opprett som ny</strong>.
+        </p>
+      </Seksjon>
+
       <Seksjon tittel="Slik retter du en runde i etterkant">
         <p>
           Under <strong>Admin → [en serie] → Runder</strong> kan du klikke{" "}
