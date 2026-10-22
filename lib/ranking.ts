@@ -117,8 +117,9 @@ export type SpillerMedRunder = {
   runder: RundeResultatMedId[]; // én per fullført runde spilleren deltok i
 };
 
-// Sesongtabell, spec §6: rangert på antall rundeseiere, deretter totalt poeng
-// i blokk A (beste N runder) - avklart 2026-10-16. Blokk B kun informativ.
+// Sesongtabell, spec §6: rangert på antall vunne kamper totalt, deretter
+// totalt poeng over alle runder (blokk B), og så snitt seire i blokk A
+// (beste N runder) - avklart 2026-10-22.
 export function beregnSesongtabell(
   spillere: SpillerMedRunder[],
   antallTellendeRunder: number
@@ -145,10 +146,13 @@ export function beregnSesongtabell(
       };
     })
     .sort((a, b) => {
-      if (b.antallRundeseiere !== a.antallRundeseiere) {
-        return b.antallRundeseiere - a.antallRundeseiere;
+      if (b.antallKampseire !== a.antallKampseire) {
+        return b.antallKampseire - a.antallKampseire;
       }
-      return b.blokkA.totaltPoeng - a.blokkA.totaltPoeng;
+      if (b.blokkB.totaltPoeng !== a.blokkB.totaltPoeng) {
+        return b.blokkB.totaltPoeng - a.blokkB.totaltPoeng;
+      }
+      return b.blokkA.snittSeire - a.blokkA.snittSeire;
     });
 }
 

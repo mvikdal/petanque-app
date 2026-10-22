@@ -76,20 +76,20 @@ Dette gir en daglig "vinner" og en rangert liste for runden, som også vises i h
 
 For hver spiller, innenfor en serie, beregnes to parallelle sett med tall, vist side om side i sesongtabellen:
 
-**A) Beste N runder (tellende, default N = 12)** – dette er grunnlaget for offisiell rangering:
+**A) Beste N runder (tellende, default N = 12)** – snitt seire her brukes som tredje sorteringskriterium (se pkt. 5):
 1. Alle fullførte runder spilleren har deltatt i, sorteres etter rundescore (sumSeire, deretter sumPoengforskjell – se pkt. 5).
 2. De N beste plukkes ut.
 3. **Snitt seire** = gjennomsnittlig `sumSeire` over disse N rundene.
 4. **Totalt poeng** = sum av `sumPoengforskjell` (signert – tap trekker fra, seire legger til) over disse N rundene.
 
-**B) Alle spilte runder** – samme to nøkkeltall, men beregnet over **samtlige fullførte runder registrert i serien** som spilleren har deltatt i – altså både de N beste og de som faller utenfor. Vises som sammenligningsgrunnlag i tabellen, uten å påvirke rangeringen.
+**B) Alle spilte runder** – samme to nøkkeltall, men beregnet over **samtlige fullførte runder registrert i serien** som spilleren har deltatt i – altså både de N beste og de som faller utenfor. Totalt poeng her er andre sorteringskriterium (se pkt. 5).
 
 Spillere med færre enn N spilte runder får identiske tall i begge bolker (siden "beste N" da omfatter alle rundene deres).
 
 **Avklart:** Siden poengforskjell nå er signert (positiv ved seier, negativ ved tap – se datamodell), vil "totalt poeng" naturlig reflektere både seiersmargin og tapsmargin uten behov for egen logikk rundt tapte kamper.
 
 4. Det er **ikke** noe minstekrav til antall spilte runder – alle spillere med minst én fullført runde vises i sesongtabellen.
-5. Sesongtabellen **rangeres på antall rundeseiere** (runder spilleren vant, også delt seier – 🏆 i tabellen), med totalt poeng i bolk A (beste N runder) som tiebreak (avklart 2026-10-16). Bolk B vises kun til informasjon.
+5. Sesongtabellen **rangeres på antall vunne kamper totalt** (✅ i tabellen, over alle spilte runder), deretter totalt poeng over alle runder (bolk B), og til slutt snitt seire i bolk A (beste N runder) – avklart 2026-10-22. Erstatter tidligere rangering på antall rundeseiere (2026-10-16).
 
 ## 7. Grensesnitt mot eksisterende system
 

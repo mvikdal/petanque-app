@@ -151,6 +151,20 @@ export default async function SeriePage({
 
   const sesongPerSpiller = new Map(sesongtabell.map((s) => [s.spillerId, s]));
 
+  // Vinner(e) av en avsluttet serie: alle som er like med førsteplassen på
+  // alle sorteringskriteriene (se beregnSesongtabell).
+  const erAvsluttet = serie.status === "avsluttet";
+  const leder = sesongtabell[0];
+  const vinnere =
+    erAvsluttet && leder
+      ? sesongtabell.filter(
+          (s) =>
+            s.antallKampseire === leder.antallKampseire &&
+            s.blokkB.totaltPoeng === leder.blokkB.totaltPoeng &&
+            s.blokkA.snittSeire === leder.blokkA.snittSeire
+        )
+      : [];
+
   const spillereAlfabetisk = Array.from(perSpiller.values())
     .map((s) => ({ spillerId: s.spillerId, spillerNavn: s.spillerNavn }))
     .sort((a, b) => a.spillerNavn.localeCompare(b.spillerNavn, "no"));
@@ -159,35 +173,50 @@ export default async function SeriePage({
     <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">{serie.navn}</h1>
-        <p className="text-sm text-neutral-700">
-          Poeng til {serie.poengGrense} · beste {serie.antallTellendeRunder} runder
-          teller · {serie.status}
-        </p>
+        <p className="text-sm text-neutral-700">{erAvsluttet ? "Avsluttet" : "Aktiv"}</p>
       </div>
 
-      {serierekord.length > 0 && (
-        <section className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 shadow-sm">
-          <h2 className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
-            🏆 Serierekord
-          </h2>
-          {serierekord.map((r) => (
-            <div key={`${r.spillerNavn}-${r.rundeId}`} className="text-sm text-neutral-900">
-              <span className="font-bold">{r.spillerNavn}</span> –{" "}
-              <span className={r.erFullstendig ? "" : "italic"}>
-                {r.sumSeire} seire,{" "}
-                <span className="font-semibold">{formatPoeng(r.sumPoengforskjell)} poeng</span>
-              </span>{" "}
-              <Link
-                href={rundeUrl(klubb.slug, serie.id, r.rundeId)}
-                className="text-amber-800 hover:underline"
-              >
-                (runde {r.rundenummer} · {new Date(r.dato).toLocaleDateString("no-NO")})
-              </Link>
-              {!r.erFullstendig && (
-                <span className="text-xs text-neutral-500 italic"> – ufullstendig</span>
-              )}
+      {(vinnere.length > 0 || serierekord.length > 0) && (
+        <section className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 shadow-sm space-y-3">
+          {vinnere.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
+                🥇 {vinnere.length === 1 ? "Vinner av serien" : "Vinnere av serien"}
+              </h2>
+              {vinnere.map((v) => (
+                <div key={v.spillerId} className="text-sm text-neutral-900">
+                  <span className="font-bold">{v.spillerNavn}</span> – {v.antallKampseire} vunne
+                  kamper,{" "}
+                  <span className="font-semibold">{formatPoeng(v.blokkB.totaltPoeng)} poeng</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+          {serierekord.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">
+                🏆 Serierekord
+              </h2>
+              {serierekord.map((r) => (
+                <div key={`${r.spillerNavn}-${r.rundeId}`} className="text-sm text-neutral-900">
+                  <span className="font-bold">{r.spillerNavn}</span> –{" "}
+                  <span className={r.erFullstendig ? "" : "italic"}>
+                    {r.sumSeire} seire,{" "}
+                    <span className="font-semibold">{formatPoeng(r.sumPoengforskjell)} poeng</span>
+                  </span>{" "}
+                  <Link
+                    href={rundeUrl(klubb.slug, serie.id, r.rundeId)}
+                    className="text-amber-800 hover:underline"
+                  >
+                    (runde {r.rundenummer} · {new Date(r.dato).toLocaleDateString("no-NO")})
+                  </Link>
+                  {!r.erFullstendig && (
+                    <span className="text-xs text-neutral-500 italic"> – ufullstendig</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -197,6 +226,10 @@ export default async function SeriePage({
             <p className="text-sm text-neutral-700">Ingen fullførte runder ennå.</p>
           ) : (
             <div className="overflow-x-auto">
+              <p className="text-xs text-neutral-700 mb-2">
+                <span className="font-semibold">Sortering:</span> 1. Vunne kamper (✅) · 2. Poeng
+                totalt (±) · 3. Snitt seire i tellende runder
+              </p>
               <table className="w-full text-sm bg-white border border-neutral-200 rounded-lg shadow-sm">
                 <thead>
                   <tr className="text-left">
@@ -213,43 +246,25 @@ export default async function SeriePage({
                       Spiller
                     </th>
                     <th
+                      className="px-3 py-2 bg-green-100 text-green-900 font-semibold text-center border-b border-green-200"
+                      colSpan={8}
+                    >
+                      Statistikk
+                    </th>
+                    <th
                       className="px-3 py-2 bg-indigo-100 text-indigo-900 font-semibold text-center border-b border-indigo-200"
                       colSpan={2}
                     >
-                      Tellende runder – Beste {serie.antallTellendeRunder}
+                      Tellende {serie.antallTellendeRunder} runder
                     </th>
                     <th
                       className="px-3 py-2 bg-neutral-100 text-neutral-700 font-semibold text-center border-b border-neutral-300"
                       colSpan={2}
                     >
-                      Alle runder – {serie.runder.length}
-                    </th>
-                    <th
-                      className="px-3 py-2 bg-green-100 text-green-900 font-semibold text-center border-b border-green-200"
-                      colSpan={7}
-                    >
-                      Statistikk
+                      Alle {serie.runder.length} runder
                     </th>
                   </tr>
                   <tr className="text-left">
-                    <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
-                      Snitt seire
-                    </th>
-                    <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
-                      Poeng
-                    </th>
-                    <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
-                      Snitt seire
-                    </th>
-                    <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
-                      Poeng
-                    </th>
-                    <th
-                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
-                      title="Runder spilt"
-                    >
-                      📅
-                    </th>
                     <th
                       className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
                       title="Kamper spilt"
@@ -258,9 +273,21 @@ export default async function SeriePage({
                     </th>
                     <th
                       className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
-                      title="Enkeltseire – totalt antall vunne kamper"
+                      title="Vunne kamper totalt"
                     >
                       ✅
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Poengforskjell totalt – alle runder"
+                    >
+                      ±
+                    </th>
+                    <th
+                      className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
+                      title="Runder spilt"
+                    >
+                      📅
                     </th>
                     <th
                       className="px-3 py-2 bg-green-100 text-green-900 border-b border-green-200 text-center"
@@ -286,6 +313,18 @@ export default async function SeriePage({
                     >
                       ✂️
                     </th>
+                    <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
+                      Snitt seire
+                    </th>
+                    <th className="px-3 py-2 bg-indigo-100 text-indigo-900 border-b border-indigo-200">
+                      Poeng
+                    </th>
+                    <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
+                      Snitt seire
+                    </th>
+                    <th className="px-3 py-2 bg-neutral-100 text-neutral-700 border-b border-neutral-300">
+                      Poeng
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -306,25 +345,16 @@ export default async function SeriePage({
                       >
                         {s.spillerNavn}
                       </td>
-                      <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
-                        {s.blokkA.snittSeire.toFixed(2)}
-                      </td>
-                      <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
-                        {s.blokkA.totaltPoeng}
-                      </td>
-                      <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
-                        {s.blokkB.snittSeire.toFixed(2)}
-                      </td>
-                      <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
-                        {s.blokkB.totaltPoeng}
-                      </td>
-                      <td className="px-3 py-2 bg-green-50 text-center text-neutral-900">
-                        {s.antallSpilteRunder}
-                      </td>
                       <td className="px-3 py-2 bg-green-50 text-center text-neutral-900">
                         {s.antallSpilteKamper}
                       </td>
                       <StatistikkTall verdi={s.antallKampseire} />
+                      <td className="px-3 py-2 bg-green-50 text-center font-semibold text-green-900 whitespace-nowrap">
+                        {formatPoeng(s.blokkB.totaltPoeng)}
+                      </td>
+                      <td className="px-3 py-2 bg-green-50 text-center text-neutral-900">
+                        {s.antallSpilteRunder}
+                      </td>
                       <StatistikkTall verdi={s.antallRundeseiere} />
                       <StatistikkTall verdi={treere.get(s.spillerId) ?? 0} />
                       <td
@@ -357,15 +387,28 @@ export default async function SeriePage({
                         // Ingenting strykes før spilleren har spilt N runder.
                         <td className="px-3 py-2 bg-green-50 text-center text-neutral-400">–</td>
                       )}
+                      <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
+                        {s.blokkA.snittSeire.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 bg-indigo-50 font-medium text-neutral-900">
+                        {s.blokkA.totaltPoeng}
+                      </td>
+                      <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
+                        {s.blokkB.snittSeire.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 bg-neutral-50 text-neutral-700">
+                        {s.blokkB.totaltPoeng}
+                      </td>
                     </tr>
                     );
                   })}
                 </tbody>
               </table>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-neutral-700">
-                <span>📅 Runder spilt</span>
                 <span>🎯 Kamper spilt</span>
-                <span>✅ Enkeltseire</span>
+                <span>✅ Vunne kamper</span>
+                <span>± Poeng totalt</span>
+                <span>📅 Runder spilt</span>
                 <span>🏆 Rundeseier</span>
                 <span>3-ere: runder med 3 seire</span>
                 <span>⭐ Beste runde</span>
