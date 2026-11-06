@@ -15,7 +15,8 @@ export type Sesjon = {
   utløper: number; // millisekunder siden epoch
 };
 
-function hemmelighet(): string {
+// Brukes også til å hashe engangskoder (lib/auth/engangskode.ts).
+export function hemmelighet(): string {
   const s = process.env.SESSION_SECRET;
   if (!s || s.length < 32) {
     throw new Error("SESSION_SECRET mangler eller er for kort (minst 32 tegn).");

@@ -39,17 +39,32 @@ model Klubb {
 
 // Innlogging (2026-10-18). Superadmin oppretter klubber og klubbadmins
 // på /superadmin, og kan i tillegg logge inn i hvilken som helst klubb.
+// Ingen passord (2026-10-24): man logger inn med en engangskode på e-post.
 model AdminBruker {
-  id           String       @id @default(cuid())
-  epost        String       @unique
-  passordHash  String
-  erSuperadmin Boolean      @default(false)
-  opprettet    DateTime     @default(now())
+  id           String            @id @default(cuid())
+  epost        String            @unique
+  erSuperadmin Boolean           @default(false)
+  opprettet    DateTime          @default(now())
   klubber      KlubbAdmin[]
+  koder        Innloggingskode[]
 }
 
-// rolle: "admin" | "demo". Demo-admin kan redigere data, men ikke bytte
-// passord eller opprette brukere.
+// Engangskode sendt på e-post ved innlogging. Bare hashen lagres, og en
+// bruker har høyst én kode om gangen (se lib/data/innloggingskoder.ts).
+model Innloggingskode {
+  id         String      @id @default(cuid())
+  brukerId   String
+  bruker     AdminBruker @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+  kodeHash   String
+  gyldigTil  DateTime
+  antallFeil Int         @default(0)
+  opprettet  DateTime    @default(now())
+
+  @@index([brukerId])
+}
+
+// rolle: "admin" | "demo". Demo-admin kan redigere data, men ikke
+// opprette brukere.
 model KlubbAdmin {
   brukerId  String
   bruker    AdminBruker @relation(fields: [brukerId], references: [id], onDelete: Cascade)

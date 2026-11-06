@@ -58,11 +58,11 @@ export default async function AdminGuidePage({ params }: PageProps<"/[klubb]/adm
 
       <Seksjon tittel="Admin (krever innlogging)">
         <p>
-          Admin-sidene (<code>/{klubb.slug}/admin</code> og underliggende sider) krever at du er logget inn som admin i {klubb.navn}. Du kommer dit via tannhjulet øverst til høyre, og logger inn med e-post og passord. Er du innlogget i en annen klubb, må du logge inn på nytt her - man er innlogget i én klubb om gangen.
+          Admin-sidene (<code>/{klubb.slug}/admin</code> og underliggende sider) krever at du er logget inn som admin i {klubb.navn}. Du kommer dit via tannhjulet øverst til høyre, og logger inn med e-postadressen din: du får en engangskode på e-post som du taster inn. Det finnes ikke passord. Er du innlogget i en annen klubb, må du logge inn på nytt her - man er innlogget i én klubb om gangen.
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li><strong>Admin</strong> – opprett nye serier i klubben (poenggrense, antall tellende runder), og se oversikt over eksisterende serier. Med <strong>Rediger</strong> kan du endre navn, ukedager, antall tellende runder og status på en eksisterende serie. Poenggrensen kan ikke endres etterpå.</li>
-          <li><strong>Konto og administratorer</strong> – bytt ditt eget passord, og legg til flere administratorer i klubben. Demo-admin kan ikke gjøre dette.</li>
+          <li><strong>Konto og administratorer</strong> – se hvem som er administratorer, og legg til flere. En ny administrator trenger bare e-postadressen sin for å logge inn. Demo-admin kan ikke gjøre dette.</li>
           <li><strong>Ny runde</strong> – registrer resultatene for en spillekveld (se under).</li>
           <li><strong>Runder</strong> – liste over alle runder i en serie, med lenke til å rette en allerede lagret runde. Rundenummeret følger alltid datoen: eldste runde er runde 1, og numrene oppdateres automatisk når en runde legges til eller får rettet dato. Hvis numrene i en eldre serie ikke følger datoene, vises knappen <strong>Sorter runder etter dato</strong> øverst på siden.</li>
         </ul>

@@ -8,18 +8,21 @@ import {
   updateRunde,
   updateSerie,
 } from "@/app/[klubb]/admin/actions";
-import { byttEgetPassord, leggTilAdmin } from "@/app/[klubb]/admin/konto/actions";
-import { loggInn } from "@/app/[klubb]/admin/login/actions";
+import { leggTilAdmin } from "@/app/[klubb]/admin/konto/actions";
+import { bekreftKode, loggInnSomDemo, sendKode } from "@/app/[klubb]/admin/login/actions";
+import { MAKS_FEIL_PER_KODE, MAKS_KODER_PER_TIME } from "@/lib/auth/engangskode";
+import { finnDemoAdmin } from "@/lib/data/brukere";
 import { prisma } from "@/lib/prisma";
-import { cookieKrukke } from "./oppsett";
+import { cookieKrukke, sendteKoder } from "./oppsett";
 import {
   forventRedirect,
   lagTestdata,
   loggInnSom,
   loggUt,
-  PASSORD,
   ryddTestdata,
+  sisteKode,
   skjema,
+  slettKoder,
   tilstand,
   type Testdata,
 } from "./testdata";
@@ -101,7 +104,6 @@ describe("admin-actions mot en annen klubb avvises", () => {
     const tidligere = await prisma.adminBruker.create({
       data: {
         epost: "fjernet@vitest.test",
-        passordHash: "x",
         klubber: { create: { klubbId: t.b.id, rolle: "admin" } },
       },
     });
@@ -158,72 +160,152 @@ describe("admin i egen klubb (kontroll)", () => {
   });
 });
 
-describe("innlogging per klubb", () => {
-  const forsøk = (slug: string, epost: string, passord = PASSORD) =>
-    forventRedirect(loggInn(slug, skjema({ epost, passord, neste: `/${slug}/admin` })));
+describe("innlogging med engangskode per klubb", () => {
+  afterEach(slettKoder);
 
-  it("admin i A kommer inn i A og får en sesjon", async () => {
-    expect(await forsøk(t.a.slug, "admin-a@vitest.test")).toBe(`/${t.a.slug}/admin`);
+  const send = (slug: string, epost: string, neste = `/${slug}/admin`) =>
+    forventRedirect(sendKode(slug, skjema({ epost, neste })));
+  const bekreft = (slug: string, epost: string, kode: string, neste = `/${slug}/admin`) =>
+    forventRedirect(bekreftKode(slug, skjema({ epost, kode, neste })));
+  const annenKode = (kode: string) => (kode === "000000" ? "111111" : "000000");
+
+  it("admin i A får en kode og kommer inn i A med den", async () => {
+    expect(await send(t.a.slug, "admin-a@vitest.test")).toContain("steg=kode");
+    const kode = sisteKode("admin-a@vitest.test")!;
+    expect(kode).toMatch(/^\d{6}$/);
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", kode)).toBe(`/${t.a.slug}/admin`);
     expect(cookieKrukke.has("sesjon")).toBe(true);
   });
 
-  it("admin i A avvises på Bs innlogging", async () => {
-    expect(await forsøk(t.b.slug, "admin-a@vitest.test")).toContain("feil=1");
+  it("e-posten skiller ikke på store og små bokstaver, og koden tåler mellomrom", async () => {
+    await send(t.a.slug, "Admin-A@vitest.test");
+    const kode = sisteKode("admin-a@vitest.test")!;
+    const medMellomrom = `${kode.slice(0, 3)} ${kode.slice(3)}`;
+    expect(await bekreft(t.a.slug, " Admin-A@vitest.test ", medMellomrom)).toBe(
+      `/${t.a.slug}/admin`
+    );
+  });
+
+  it("admin i A får ingen kode på Bs innlogging, og en kode fra A virker ikke i B", async () => {
+    expect(await send(t.b.slug, "admin-a@vitest.test")).toContain("steg=kode");
+    expect(sendteKoder).toHaveLength(0);
+
+    await send(t.a.slug, "admin-a@vitest.test");
+    const kode = sisteKode("admin-a@vitest.test")!;
+    expect(await bekreft(t.b.slug, "admin-a@vitest.test", kode)).toContain("feil=kode");
     expect(cookieKrukke.has("sesjon")).toBe(false);
   });
 
-  it("feil passord og ukjent e-post avvises", async () => {
-    expect(await forsøk(t.a.slug, "admin-a@vitest.test", "feil-passord")).toContain("feil=1");
-    expect(await forsøk(t.a.slug, "finnes-ikke@vitest.test")).toContain("feil=1");
+  it("ukjent e-post får samme svar som en ekte admin, men ingen e-post sendes", async () => {
+    const ekte = await send(t.a.slug, "admin-a@vitest.test");
+    const ukjent = await send(t.a.slug, "finnes-ikke@vitest.test");
+    expect(ukjent).toBe(ekte.replace("admin-a", "finnes-ikke"));
+    expect(sendteKoder.map((k) => k.til)).toEqual(["admin-a@vitest.test"]);
+    expect(await bekreft(t.a.slug, "finnes-ikke@vitest.test", "123456")).toContain("feil=kode");
+  });
+
+  it("feil kode avvises, og riktig kode virker etterpå", async () => {
+    await send(t.a.slug, "admin-a@vitest.test");
+    const kode = sisteKode("admin-a@vitest.test")!;
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", annenKode(kode))).toContain("feil=kode");
+    expect(cookieKrukke.has("sesjon")).toBe(false);
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", kode)).toBe(`/${t.a.slug}/admin`);
+  });
+
+  it(`koden sperres etter ${MAKS_FEIL_PER_KODE} feil forsøk`, async () => {
+    await send(t.a.slug, "admin-a@vitest.test");
+    const kode = sisteKode("admin-a@vitest.test")!;
+    for (let i = 0; i < MAKS_FEIL_PER_KODE; i++) {
+      await bekreft(t.a.slug, "admin-a@vitest.test", annenKode(kode));
+    }
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", kode)).toContain("feil=kode");
+  });
+
+  it("utløpt kode avvises", async () => {
+    await send(t.a.slug, "admin-a@vitest.test");
+    await prisma.innloggingskode.updateMany({
+      where: { brukerId: t.adminA.id },
+      data: { gyldigTil: new Date(Date.now() - 1000) },
+    });
+    const kode = sisteKode("admin-a@vitest.test")!;
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", kode)).toContain("feil=kode");
+  });
+
+  it("en ny kode gjør den forrige ugyldig", async () => {
+    await send(t.a.slug, "admin-a@vitest.test");
+    const første = sisteKode("admin-a@vitest.test")!;
+    await send(t.a.slug, "admin-a@vitest.test");
+    const andre = sisteKode("admin-a@vitest.test")!;
+    // Kodene er tilfeldige og kan i sjeldne tilfeller være like.
+    if (første !== andre) {
+      expect(await bekreft(t.a.slug, "admin-a@vitest.test", første)).toContain("feil=kode");
+    }
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", andre)).toBe(`/${t.a.slug}/admin`);
+  });
+
+  it("en kode kan bare brukes én gang", async () => {
+    await send(t.a.slug, "admin-a@vitest.test");
+    const kode = sisteKode("admin-a@vitest.test")!;
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", kode)).toBe(`/${t.a.slug}/admin`);
+    loggUt();
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", kode)).toContain("feil=kode");
+  });
+
+  it(`høyst ${MAKS_KODER_PER_TIME} koder i timen, uten at svaret avslører det`, async () => {
+    for (let i = 0; i < MAKS_KODER_PER_TIME + 2; i++) {
+      expect(await send(t.a.slug, "admin-a@vitest.test")).toContain("steg=kode");
+    }
+    expect(sendteKoder).toHaveLength(MAKS_KODER_PER_TIME);
   });
 
   it("superadmin kommer inn i alle klubber", async () => {
-    expect(await forsøk(t.b.slug, "super@vitest.test")).toBe(`/${t.b.slug}/admin`);
+    await send(t.b.slug, "super@vitest.test");
+    const kode = sisteKode("super@vitest.test")!;
+    expect(await bekreft(t.b.slug, "super@vitest.test", kode)).toBe(`/${t.b.slug}/admin`);
   });
 
   it("«neste» utenfor klubbens admin ignoreres", async () => {
-    const mål = await forventRedirect(
-      loggInn(
-        t.a.slug,
-        skjema({ epost: "admin-a@vitest.test", passord: PASSORD, neste: "https://evil.example" })
-      )
+    expect(await send(t.a.slug, "admin-a@vitest.test", "https://evil.example")).not.toContain(
+      "evil"
     );
-    expect(mål).toBe(`/${t.a.slug}/admin`);
+    const kode = sisteKode("admin-a@vitest.test")!;
+    expect(await bekreft(t.a.slug, "admin-a@vitest.test", kode, "https://evil.example")).toBe(
+      `/${t.a.slug}/admin`
+    );
   });
 });
 
 describe("demo-rollen", () => {
-  it("kan ikke bytte passord eller legge til admins", async () => {
+  it("«Prøv som demo» virker bare i demo-klubben", async () => {
+    expect(await forventRedirect(loggInnSomDemo(t.a.slug))).toBe("/");
+    expect(cookieKrukke.has("sesjon")).toBe(false);
+  });
+
+  it("demo-knappen finner klubbens demo-admin, ikke vanlige admins", async () => {
+    expect(await finnDemoAdmin(t.a.id)).toEqual({ brukerId: t.demoA.id });
+    expect(await finnDemoAdmin(t.b.id)).toBeNull();
+  });
+
+  it("kan ikke legge til admins", async () => {
     loggInnSom(t.demoA.id, t.a);
     const før = await tilstand(t.a.id);
-    await expect(
-      byttEgetPassord(
-        t.a.slug,
-        skjema({ gammelt: PASSORD, nytt: "kapret-passord", gjenta: "kapret-passord" })
-      )
-    ).rejects.toThrow(/Demo-admin kan ikke/);
-    await expect(
-      leggTilAdmin(t.a.slug, skjema({ epost: "kapret@vitest.test", passord: "kapret-passord" }))
-    ).rejects.toThrow(/Demo-admin kan ikke/);
+    await expect(leggTilAdmin(t.a.slug, skjema({ epost: "kapret@vitest.test" }))).rejects.toThrow(
+      /Demo-admin kan ikke/
+    );
     expect(await tilstand(t.a.id)).toEqual(før);
     expect(
       await prisma.adminBruker.findUnique({ where: { epost: "kapret@vitest.test" } })
     ).toBeNull();
-    // Passordet er uendret.
-    const mål = await forventRedirect(
-      loggInn(t.a.slug, skjema({ epost: "demo-a@vitest.test", passord: PASSORD }))
-    );
-    expect(mål).toBe(`/${t.a.slug}/admin`);
   });
 
   it("vanlig admin kan legge til admin (kontroll), men bare i egen klubb", async () => {
     loggInnSom(t.adminB.id, t.b);
     const mål = await forventRedirect(
-      leggTilAdmin(t.b.slug, skjema({ epost: "kollega-b@vitest.test", passord: "kollega-passord" }))
+      leggTilAdmin(t.b.slug, skjema({ epost: "kollega-b@vitest.test" }))
     );
     expect(mål).toContain("ok=");
     await expect(
-      leggTilAdmin(t.a.slug, skjema({ epost: "kollega-a@vitest.test", passord: "kollega-passord" }))
+      leggTilAdmin(t.a.slug, skjema({ epost: "kollega-a@vitest.test" }))
     ).rejects.toThrow(/Ikke innlogget/);
 
     const kollega = await prisma.adminBruker.findUniqueOrThrow({

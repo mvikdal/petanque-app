@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { hashPassord, sjekkPassord } from "@/lib/auth/passord";
+import { hashKode, kodeStemmer, lagKode } from "@/lib/auth/engangskode";
 import { lagSesjonstoken, lesSesjonstoken } from "@/lib/auth/sesjon";
 import { proxy } from "@/proxy";
 
-// Rene enhetstester uten database: proxy.ts, sesjonstoken og passord.
+// Rene enhetstester uten database: proxy.ts, sesjonstoken og engangskoder.
 
 const sinsen = { id: "klubb-sinsen", slug: "sinsen" };
 
@@ -98,13 +98,21 @@ describe("sesjonstoken", () => {
   });
 });
 
-describe("passord", () => {
-  it("riktig passord godtas, feil avvises, og hashen er saltet", async () => {
-    const h1 = await hashPassord("et-passord-123");
-    const h2 = await hashPassord("et-passord-123");
-    expect(h1).not.toBe(h2);
-    expect(await sjekkPassord("et-passord-123", h1)).toBe(true);
-    expect(await sjekkPassord("feil-passord", h1)).toBe(false);
-    expect(await sjekkPassord("et-passord-123", "ugyldig-format")).toBe(false);
+describe("engangskode", () => {
+  it("er 6 sifre, også med ledende null", () => {
+    for (let i = 0; i < 200; i++) expect(lagKode()).toMatch(/^\d{6}$/);
+  });
+
+  it("riktig kode godtas, også med mellomrom, og feil kode avvises", () => {
+    const hash = hashKode("012345");
+    expect(kodeStemmer("012345", hash)).toBe(true);
+    expect(kodeStemmer(" 012 345 ", hash)).toBe(true);
+    expect(kodeStemmer("012346", hash)).toBe(false);
+    expect(kodeStemmer("", hash)).toBe(false);
+    expect(kodeStemmer("012345", "ugyldig")).toBe(false);
+  });
+
+  it("hashen avslører ikke koden", () => {
+    expect(hashKode("012345")).not.toContain("012345");
   });
 });

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { MIN_PASSORDLENGDE } from "@/lib/auth/passord";
 import { listKlubberMedAdmins } from "@/lib/data/superadmin";
 import { adminUrl, klubbUrl } from "@/lib/lenker";
 import { krevSuperadminSide } from "@/lib/superadmin";
-import { leggTilAdmin, opprettKlubbMedAdmin, tilbakestillPassord } from "./actions";
+import { leggTilAdmin, opprettKlubbMedAdmin } from "./actions";
 import { loggUtSuperadmin } from "./login/actions";
 
 const felt = "w-full border border-neutral-300 rounded px-3 py-2 text-sm";
@@ -85,29 +84,6 @@ export default async function SuperadminPage({ searchParams }: PageProps<"/super
                           <span className="ml-2 text-xs text-indigo-800">superadmin</span>
                         )}
                       </span>
-                      {!a.bruker.erSuperadmin && (
-                        <form
-                          action={tilbakestillPassord.bind(null, a.bruker.id)}
-                          className="flex gap-2"
-                        >
-                          <input
-                            name="passord"
-                            type="text"
-                            required
-                            minLength={MIN_PASSORDLENGDE}
-                            autoComplete="off"
-                            placeholder="Nytt midlertidig passord"
-                            aria-label={`Nytt passord for ${a.bruker.epost}`}
-                            className="border border-neutral-300 rounded px-2 py-1 text-sm w-52"
-                          />
-                          <button
-                            type="submit"
-                            className="border border-indigo-700 text-indigo-700 rounded px-3 py-1 text-sm font-medium hover:bg-indigo-50"
-                          >
-                            Tilbakestill passord
-                          </button>
-                        </form>
-                      )}
                     </li>
                   ))}
                 </ul>
@@ -119,25 +95,13 @@ export default async function SuperadminPage({ searchParams }: PageProps<"/super
                 </summary>
                 <form
                   action={leggTilAdmin.bind(null, k.id)}
-                  className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] items-end"
+                  className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto] items-end"
                 >
                   <div>
                     <label className="block text-xs font-medium mb-1" htmlFor={`epost-${k.id}`}>
                       E-post
                     </label>
                     <input id={`epost-${k.id}`} name="epost" type="email" required className={felt} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1" htmlFor={`passord-${k.id}`}>
-                      Midlertidig passord
-                    </label>
-                    <input
-                      id={`passord-${k.id}`}
-                      name="passord"
-                      type="text"
-                      autoComplete="off"
-                      className={felt}
-                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1" htmlFor={`rolle-${k.id}`}>
@@ -153,9 +117,8 @@ export default async function SuperadminPage({ searchParams }: PageProps<"/super
                   </button>
                 </form>
                 <p className="text-xs text-neutral-600 mt-2">
-                  Finnes e-posten fra før, beholder brukeren sitt eksisterende passord.
-                  Demo-rollen kan registrere resultater, men ikke bytte passord eller
-                  opprette brukere.
+                  Brukeren logger inn med e-postadressen sin og får en kode tilsendt.
+                  Demo-rollen kan registrere resultater, men ikke opprette brukere.
                 </p>
               </details>
             </li>
@@ -193,20 +156,6 @@ export default async function SuperadminPage({ searchParams }: PageProps<"/super
               E-post til første admin
             </label>
             <input id="epost" name="epost" type="email" required className={felt} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1" htmlFor="passord">
-              Midlertidig passord (minst {MIN_PASSORDLENGDE} tegn)
-            </label>
-            <input
-              id="passord"
-              name="passord"
-              type="text"
-              required
-              minLength={MIN_PASSORDLENGDE}
-              autoComplete="off"
-              className={felt}
-            />
           </div>
           <button type="submit" className={knapp}>
             Opprett klubb

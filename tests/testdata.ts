@@ -1,13 +1,11 @@
 import { expect } from "vitest";
-import { hashPassord } from "@/lib/auth/passord";
 import { lagSesjonstoken, SESJONSCOOKIE } from "@/lib/auth/sesjon";
 import { prisma } from "@/lib/prisma";
-import { cookieKrukke } from "./oppsett";
+import { cookieKrukke, sendteKoder } from "./oppsett";
 
 // To testklubber med hver sin serie, spillere og én runde, og brukere med
 // ulike roller. Alt har prefikset vitest-, slik at det kan ryddes bort
 // trygt - også etter en test som krasjet halvveis.
-export const PASSORD = "vitest-passord-123";
 const EPOST = (navn: string) => `${navn}@vitest.test`;
 
 export async function ryddTestdata() {
@@ -48,7 +46,6 @@ async function lagBruker(navn: string, erSuperadmin: boolean, klubber: { id: str
   return prisma.adminBruker.create({
     data: {
       epost: EPOST(navn),
-      passordHash: await hashPassord(PASSORD),
       erSuperadmin,
       klubber: { create: klubber.map((k) => ({ klubbId: k.id, rolle: k.rolle })) },
     },
@@ -77,6 +74,18 @@ export function loggInnSom(brukerId: string, klubb: { id: string; slug: string }
 
 export function loggUt() {
   cookieKrukke.clear();
+}
+
+// Sletter testbrukernes innloggingskoder, så grensen for antall koder per
+// time ikke henger igjen mellom testene.
+export async function slettKoder() {
+  sendteKoder.length = 0;
+  await prisma.innloggingskode.deleteMany({ where: { bruker: { epost: { endsWith: "@vitest.test" } } } });
+}
+
+// Koden som sist ble «sendt» til en e-postadresse (se oppsett.ts).
+export function sisteKode(epost: string): string | undefined {
+  return sendteKoder.filter((k) => k.til === epost).at(-1)?.kode;
 }
 
 // redirect() kaster en spesiell feil der målet ligger i digest-feltet.

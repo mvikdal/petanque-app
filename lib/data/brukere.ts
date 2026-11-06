@@ -1,14 +1,26 @@
-// Adminbrukere og deres tilgang til klubber. Passord-hashen forlater
-// aldri dette laget utenom til selve passordsjekken ved innlogging.
+// Adminbrukere og deres tilgang til klubber. Ingen passord: man logger inn
+// med en engangskode på e-post (lib/data/innloggingskoder.ts).
 import { prisma } from "@/lib/prisma";
-import { hashPassord, MIN_PASSORDLENGDE, sjekkPassord } from "@/lib/auth/passord";
 
 export type Rolle = "admin" | "demo";
 
+export function normaliserEpost(epost: string) {
+  return epost.trim().toLowerCase();
+}
+
 export async function finnBrukerForInnlogging(epost: string) {
   return prisma.adminBruker.findUnique({
-    where: { epost: epost.trim().toLowerCase() },
-    select: { id: true, passordHash: true, erSuperadmin: true },
+    where: { epost: normaliserEpost(epost) },
+    select: { id: true, epost: true, erSuperadmin: true },
+  });
+}
+
+// Demo-admin i en klubb, for knappen «Prøv som demo» på /demo/admin/login.
+export async function finnDemoAdmin(klubbId: string) {
+  return prisma.klubbAdmin.findFirst({
+    where: { klubbId, rolle: "demo", bruker: { erSuperadmin: false } },
+    orderBy: { opprettet: "asc" },
+    select: { brukerId: true },
   });
 }
 
@@ -32,22 +44,15 @@ export async function hentKlubbtilgang(
   return bruker.erSuperadmin ? { rolle: "admin" } : null;
 }
 
-export function sjekkPassordkrav(passord: string) {
-  if (passord.length < MIN_PASSORDLENGDE) {
-    throw new Error(`Passordet må ha minst ${MIN_PASSORDLENGDE} tegn.`);
-  }
-}
-
 // Gir en bruker admin-tilgang i en klubb. Finnes e-posten fra før (f.eks.
-// admin i en annen klubb), knyttes den eksisterende brukeren til klubben
-// og passordet beholdes - ellers opprettes brukeren med passordet.
+// admin i en annen klubb), knyttes den eksisterende brukeren til klubben -
+// ellers opprettes brukeren. Personen logger inn med e-postadressen sin.
 export async function leggTilKlubbAdmin(
   klubbId: string,
   epost: string,
-  passord: string,
   rolle: Rolle
 ): Promise<{ nyBruker: boolean }> {
-  const normalisert = epost.trim().toLowerCase();
+  const normalisert = normaliserEpost(epost);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalisert)) {
     throw new Error("Ugyldig e-postadresse.");
   }
@@ -65,13 +70,8 @@ export async function leggTilKlubbAdmin(
     return { nyBruker: false };
   }
 
-  sjekkPassordkrav(passord);
   await prisma.adminBruker.create({
-    data: {
-      epost: normalisert,
-      passordHash: await hashPassord(passord),
-      klubber: { create: { klubbId, rolle } },
-    },
+    data: { epost: normalisert, klubber: { create: { klubbId, rolle } } },
   });
   return { nyBruker: true };
 }
@@ -81,18 +81,5 @@ export async function listKlubbAdmins(klubbId: string) {
     where: { klubbId },
     orderBy: { opprettet: "asc" },
     select: { rolle: true, bruker: { select: { id: true, epost: true } } },
-  });
-}
-
-// Brukeren bytter sitt eget passord og må oppgi det gamle.
-export async function byttPassord(brukerId: string, gammelt: string, nytt: string) {
-  sjekkPassordkrav(nytt);
-  const bruker = await prisma.adminBruker.findUnique({ where: { id: brukerId } });
-  if (!bruker || !(await sjekkPassord(gammelt, bruker.passordHash))) {
-    throw new Error("Nåværende passord er feil.");
-  }
-  await prisma.adminBruker.update({
-    where: { id: brukerId },
-    data: { passordHash: await hashPassord(nytt) },
   });
 }

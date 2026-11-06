@@ -32,3 +32,12 @@ vi.mock("next/cache", () => ({
   revalidatePath: () => {},
   revalidateTag: () => {},
 }));
+
+// Ingen ekte e-post i testene: innloggingskodene samles her, så testene
+// kan hente koden som «ble sendt».
+export const sendteKoder: { til: string; kode: string }[] = [];
+
+vi.mock("@/lib/epost", () => ({
+  sendEpost: async () => {},
+  sendInnloggingskode: async (til: string, kode: string) => void sendteKoder.push({ til, kode }),
+}));

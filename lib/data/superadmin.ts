@@ -2,9 +2,7 @@
 // tilgang til serier, runder eller spillere herfra - superadmin håndterer
 // bare oppsett og brukere.
 import { prisma } from "@/lib/prisma";
-import { hashPassord } from "@/lib/auth/passord";
 import { erGyldigSlug } from "@/lib/slug";
-import { sjekkPassordkrav } from "@/lib/data/brukere";
 
 export { leggTilKlubbAdmin } from "@/lib/data/brukere";
 
@@ -49,20 +47,4 @@ export async function opprettKlubb(navn: string, slug: string) {
     throw new Error(`Slugen «${slug}» er allerede i bruk.`);
   }
   return prisma.klubb.create({ data: { navn, slug } });
-}
-
-// Tilbakestilling gjelder klubbadmins. Superadmins passord settes med
-// scripts/opprett-superadmin.ts, så ingen kan låse ute en superadmin herfra.
-export async function tilbakestillPassord(brukerId: string, passord: string) {
-  sjekkPassordkrav(passord);
-  const bruker = await prisma.adminBruker.findUnique({ where: { id: brukerId } });
-  if (!bruker) throw new Error("Brukeren finnes ikke.");
-  if (bruker.erSuperadmin) {
-    throw new Error("Superadmins passord settes med scripts/opprett-superadmin.ts.");
-  }
-  await prisma.adminBruker.update({
-    where: { id: brukerId },
-    data: { passordHash: await hashPassord(passord) },
-  });
-  return bruker.epost;
 }
