@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { Datovelger } from "@/components/Datovelger";
 import { krevKlubbAdminSide } from "@/lib/klubb-admin";
 import { listSerier } from "@/lib/data/serier";
 import {
+  adminBackupUrl,
   adminGuideUrl,
   adminKontoUrl,
   adminNyRundeUrl,
@@ -73,6 +75,12 @@ export default async function AdminPage({ params }: PageProps<"/[klubb]/admin">)
                 >
                   Rediger
                 </Link>
+                <Link
+                  className="text-indigo-700 font-medium hover:underline"
+                  href={adminBackupUrl(klubb.slug, s.id)}
+                >
+                  Kopier
+                </Link>
                 <Link className="text-neutral-600 hover:underline" href={serieUrl(klubb.slug, s.id)}>
                   Offentlig side
                 </Link>
@@ -117,10 +125,9 @@ export default async function AdminPage({ params }: PageProps<"/[klubb]/admin">)
             <label className="block text-sm font-medium mb-1" htmlFor="sesongStart">
               Sesongstart
             </label>
-            <input
+            <Datovelger
               id="sesongStart"
               name="sesongStart"
-              type="date"
               required
               className="w-full border border-neutral-300 rounded px-3 py-2 text-sm"
             />

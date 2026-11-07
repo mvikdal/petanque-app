@@ -2,6 +2,7 @@
 // tar klubbId først og filtrerer alltid på den - direkte på Serie, og via
 // serien for Spiller og Runde. En id fra en annen klubb gir null (eller
 // kaster ved skriving), aldri data.
+import { lagreBackup, type LagretKopi } from "@/lib/data/backup";
 import { prisma } from "@/lib/prisma";
 import { erGyldigPoengforskjell } from "@/lib/ranking";
 
@@ -85,6 +86,12 @@ export async function listSpillere(klubbId: string, serieId: string) {
 
 // ---------- Skriving ----------
 
+// Alle endringer i en serie markeres, så den nattlige sikkerhetskopien
+// vet hvilke serier som må kopieres (lib/data/backup.ts).
+async function markerEndret(serieId: string) {
+  await prisma.serie.update({ where: { id: serieId }, data: { sistEndret: new Date() } });
+}
+
 async function krevSerie(klubbId: string, serieId: string) {
   const serie = await prisma.serie.findFirst({ where: { id: serieId, klubbId } });
   if (!serie) throw new Error("Serien finnes ikke i denne klubben.");
@@ -103,7 +110,7 @@ export async function opprettSerie(
 ) {
   const finnes = await prisma.serie.findFirst({ where: { klubbId, navn: data.navn } });
   if (finnes) throw new Error(`Serien «${data.navn}» finnes allerede i klubben.`);
-  return prisma.serie.create({ data: { ...data, klubbId } });
+  return prisma.serie.create({ data: { ...data, klubbId, sistEndret: new Date() } });
 }
 
 export async function oppdaterSerie(
@@ -111,12 +118,23 @@ export async function oppdaterSerie(
   serieId: string,
   data: { navn: string; ukedager: string; antallTellendeRunder: number; status: string }
 ) {
-  await krevSerie(klubbId, serieId);
+  const før = await krevSerie(klubbId, serieId);
   const navnTatt = await prisma.serie.findFirst({
     where: { klubbId, navn: data.navn, NOT: { id: serieId } },
   });
   if (navnTatt) throw new Error(`Serien «${data.navn}» finnes allerede i klubben.`);
-  return prisma.serie.update({ where: { id: serieId, klubbId }, data });
+  const serie = await prisma.serie.update({
+    where: { id: serieId, klubbId },
+    data: { ...data, sistEndret: new Date() },
+  });
+
+  // Når serien avsluttes, tas en endelig kopi med en gang. Etterpå endres
+  // den ikke, så den nattlige jobben tar ingen flere kopier av den.
+  let endeligKopi: LagretKopi | null = null;
+  if (før.status !== "avsluttet" && data.status === "avsluttet") {
+    endeligKopi = await lagreBackup(serieId, "avsluttet");
+  }
+  return { serie, endeligKopi };
 }
 
 export async function opprettSpiller(klubbId: string, serieId: string, navn: string) {
@@ -125,7 +143,9 @@ export async function opprettSpiller(klubbId: string, serieId: string, navn: str
   if (eksisterende.some((s) => s.navn.toLowerCase() === navn.toLowerCase())) {
     throw new Error(`"${navn}" er allerede registrert i denne serien.`);
   }
-  return prisma.spiller.create({ data: { navn, serieId } });
+  const spiller = await prisma.spiller.create({ data: { navn, serieId } });
+  await markerEndret(serieId);
+  return spiller;
 }
 
 export type NyDeltakelseInput = {
@@ -198,6 +218,7 @@ async function renummererRunderEtterDato(serieId: string) {
 export async function sorterRunderEtterDato(klubbId: string, serieId: string) {
   await krevSerie(klubbId, serieId);
   await renummererRunderEtterDato(serieId);
+  await markerEndret(serieId);
 }
 
 export async function opprettRunde(
@@ -232,6 +253,7 @@ export async function opprettRunde(
 
   // En runde kan registreres med en dato før tidligere runder.
   await renummererRunderEtterDato(serieId);
+  await markerEndret(serieId);
   return runde;
 }
 
@@ -286,5 +308,6 @@ export async function oppdaterRunde(
 
   // En rettet dato kan flytte runden i rekkefølgen.
   await renummererRunderEtterDato(runde.serieId);
+  await markerEndret(runde.serieId);
   return runde;
 }

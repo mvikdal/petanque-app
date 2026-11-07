@@ -16,3 +16,5 @@ export const adminRedigerSerieUrl = (slug: string, serieId: string) =>
 export const adminRedigerRundeUrl = (slug: string, serieId: string, rundeId: string) =>
   `/${slug}/admin/serie/${serieId}/runde/${rundeId}/rediger`;
 export const adminKontoUrl = (slug: string) => `/${slug}/admin/konto`;
+export const adminBackupUrl = (slug: string, serieId: string) =>
+  `/${slug}/admin/serie/${serieId}/backup`;

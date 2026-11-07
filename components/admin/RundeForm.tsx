@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { dagensDato, Datovelger } from "@/components/Datovelger";
 import {
   createRunde,
   createSpiller,
@@ -83,7 +84,7 @@ export function RundeForm(
     return initial;
   });
   const [dato, setDato] = useState(() =>
-    mode === "rediger" ? props.initialDato : new Date().toISOString().slice(0, 10)
+    mode === "rediger" ? props.initialDato : dagensDato()
   );
   const [kommentar, setKommentar] = useState("");
   const [nyttNavn, setNyttNavn] = useState("");
@@ -363,11 +364,10 @@ export function RundeForm(
         <label className="block text-sm font-medium text-neutral-900 mb-1" htmlFor="dato">
           Dato
         </label>
-        <input
+        <Datovelger
           id="dato"
-          type="date"
           value={dato}
-          onChange={(e) => setDato(e.target.value)}
+          onChange={setDato}
           className="border border-neutral-300 rounded px-3 py-2 text-sm text-neutral-900"
         />
       </div>

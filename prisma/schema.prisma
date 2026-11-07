@@ -87,6 +87,10 @@ model Serie {
   antallTellendeRunder Int      @default(12)
   status               String   @default("aktiv") // "aktiv" | "avsluttet"
   opprettet            DateTime @default(now())
+  // Brukes av den nattlige sikkerhetskopien: serier der sistEndret er
+  // nyere enn sistBackup, får en ny kopi (se lib/data/backup.ts).
+  sistEndret           DateTime?
+  sistBackup           DateTime?
   klubbId              String
   klubb                Klubb    @relation(fields: [klubbId], references: [id], onDelete: Cascade)
   runder               Runde[]
@@ -120,6 +124,25 @@ model RundeEndring {
   forrigeData String
 
   @@index([rundeId])
+}
+
+// Sikkerhetskopi av én serie (2026-11-07): serien, spillerne, rundene,
+// deltakelsene og endringsloggen som JSON i data. Bevisst uten relasjoner,
+// så kopiene blir liggende også om serien slettes.
+// grunn: "automatisk" | "manuell" | "avsluttet" | "før gjenoppretting".
+model SerieBackup {
+  id             String   @id @default(cuid())
+  serieId        String
+  klubbId        String
+  serienavn      String
+  grunn          String
+  antallRunder   Int
+  antallSpillere Int
+  data           String
+  opprettet      DateTime @default(now())
+
+  @@index([serieId, opprettet])
+  @@index([klubbId])
 }
 
 // En rad = én spillers resultat i én runde. Runden opprettes i databasen

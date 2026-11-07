@@ -1,5 +1,7 @@
 "use server";
 
+import { sendKopierPåEpost } from "@/lib/backup-epost";
+import * as backup from "@/lib/data/backup";
 import { harBildetolkning, krevKlubbAdmin } from "@/lib/klubb-admin";
 import * as data from "@/lib/data/serier";
 import type { NyDeltakelseInput } from "@/lib/data/serier";
@@ -13,6 +15,7 @@ import {
   type TolketRad,
 } from "@/lib/resultatark";
 import {
+  adminBackupUrl,
   adminRunderUrl,
   adminUrl,
   klubbUrl,
@@ -73,7 +76,18 @@ export async function updateSerie(klubbSlug: string, serieId: string, formData: 
     throw new Error("Ugyldig status");
   }
 
-  await data.oppdaterSerie(klubb.id, serieId, { navn, ukedager, antallTellendeRunder, status });
+  const { endeligKopi } = await data.oppdaterSerie(klubb.id, serieId, {
+    navn,
+    ukedager,
+    antallTellendeRunder,
+    status,
+  });
+  // Den endelige kopien av en avsluttet serie sendes på e-post med en gang.
+  if (endeligKopi) {
+    await sendKopierPåEpost([endeligKopi]).catch((e) =>
+      console.error("Kunne ikke sende endelig sikkerhetskopi på e-post:", e)
+    );
+  }
 
   revalidatePath(adminUrl(klubb.slug));
   revalidatePath(klubbUrl(klubb.slug));
@@ -197,4 +211,62 @@ export async function tolkResultatark(
       advarsler: kontrollerRad(rad, serie.poengGrense),
     })),
   };
+}
+
+// ---------- Sikkerhetskopi ----------
+// Demo-admin kan se og laste ned kopier, men ikke ta kopi eller
+// gjenopprette - demo-innloggingen er åpen for alle.
+
+async function krevAdminSomKanGjenopprette(klubbSlug: string) {
+  const klubb = await krevKlubbAdmin(klubbSlug);
+  if (klubb.rolle === "demo") {
+    throw new Error("Demo-admin kan ikke ta eller gjenopprette sikkerhetskopier.");
+  }
+  return klubb;
+}
+
+function tilbakeTilKopier(slug: string, serieId: string, type: "ok" | "feil", melding: string): never {
+  revalidatePath(adminBackupUrl(slug, serieId));
+  redirect(`${adminBackupUrl(slug, serieId)}?${type}=${encodeURIComponent(melding)}`);
+}
+
+export async function taBackupNå(klubbSlug: string, serieId: string) {
+  const klubb = await krevAdminSomKanGjenopprette(klubbSlug);
+  await backup.taManuellBackup(klubb.id, serieId);
+  tilbakeTilKopier(klubb.slug, serieId, "ok", "Sikkerhetskopien er tatt.");
+}
+
+export async function gjenopprettBackup(
+  klubbSlug: string,
+  serieId: string,
+  backupId: string,
+  formData: FormData
+) {
+  const klubb = await krevAdminSomKanGjenopprette(klubbSlug);
+  if (formData.get("bekreft") !== "ja") {
+    tilbakeTilKopier(klubb.slug, serieId, "feil", "Kryss av for at du forstår hva gjenopprettingen gjør.");
+  }
+
+  // redirect() kaster internt, så tilbakeTilKopier() kalles utenfor try/catch.
+  let tidspunkt: Date;
+  try {
+    tidspunkt = (await backup.gjenopprettSerie(klubb.id, serieId, backupId)).opprettet;
+  } catch (e) {
+    tilbakeTilKopier(klubb.slug, serieId, "feil", e instanceof Error ? e.message : "Noe gikk galt.");
+  }
+
+  revalidatePath(klubbUrl(klubb.slug));
+  revalidatePath(adminUrl(klubb.slug));
+  revalidatePath(serieUrl(klubb.slug, serieId), "layout");
+  revalidatePath(adminRunderUrl(klubb.slug, serieId));
+  tilbakeTilKopier(
+    klubb.slug,
+    serieId,
+    "ok",
+    `Serien er gjenopprettet slik den var ${tidspunkt.toLocaleString("no-NO", {
+      timeZone: "Europe/Oslo",
+      dateStyle: "short",
+      timeStyle: "short",
+    })}. Tilstanden før gjenopprettingen er lagret som egen kopi.`
+  );
 }

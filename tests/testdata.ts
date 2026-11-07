@@ -9,6 +9,12 @@ import { cookieKrukke, sendteKoder } from "./oppsett";
 const EPOST = (navn: string) => `${navn}@vitest.test`;
 
 export async function ryddTestdata() {
+  // Sikkerhetskopiene har ingen relasjon til klubben, så de slettes for seg.
+  const klubber = await prisma.klubb.findMany({
+    where: { slug: { startsWith: "vitest-" } },
+    select: { id: true },
+  });
+  await prisma.serieBackup.deleteMany({ where: { klubbId: { in: klubber.map((k) => k.id) } } });
   // Deltakelse → Spiller er RESTRICT, så deltakelsene må slettes før
   // klubben (og dermed serier og spillere) kan slettes.
   await prisma.deltakelse.deleteMany({

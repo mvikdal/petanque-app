@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { krevKlubbAdminSide } from "@/lib/klubb-admin";
 import { hentSerie } from "@/lib/data/serier";
-import { adminUrl } from "@/lib/lenker";
+import { adminBackupUrl, adminUrl } from "@/lib/lenker";
 import { notFound } from "next/navigation";
 import { updateSerie } from "../../../actions";
 
@@ -22,6 +22,12 @@ export default async function RedigerSeriePage({
       <p className="text-sm mb-4">
         <Link href={adminUrl(klubb.slug)} className="text-indigo-700 font-medium hover:underline">
           ← Tilbake til admin
+        </Link>
+        <Link
+          href={adminBackupUrl(klubb.slug, serie.id)}
+          className="text-indigo-700 font-medium hover:underline ml-4"
+        >
+          Sikkerhetskopier
         </Link>
       </p>
       <h1 className="text-2xl font-bold text-neutral-900 mb-1">Rediger serie</h1>

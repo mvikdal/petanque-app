@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { krevKlubbAdminSide } from "@/lib/klubb-admin";
 import { hentSerieMedRundeliste } from "@/lib/data/serier";
-import { adminNyRundeUrl, adminRedigerRundeUrl, rundeUrl } from "@/lib/lenker";
+import { adminBackupUrl, adminNyRundeUrl, adminRedigerRundeUrl, rundeUrl } from "@/lib/lenker";
 import { notFound } from "next/navigation";
 import { sorterRunderEtterDato } from "../../../actions";
 
@@ -25,9 +25,12 @@ export default async function AdminRunderPage({
   return (
     <div>
       <h1 className="text-2xl font-bold text-neutral-900 mb-1">Runder – {serie.navn}</h1>
-      <p className="text-sm mb-6">
+      <p className="text-sm mb-6 flex gap-4">
         <Link href={adminNyRundeUrl(klubb.slug, serie.id)} className="text-indigo-700 font-medium hover:underline">
           + Ny runde
+        </Link>
+        <Link href={adminBackupUrl(klubb.slug, serie.id)} className="text-indigo-700 font-medium hover:underline">
+          Sikkerhetskopier
         </Link>
       </p>
       {iUtakt && (
